@@ -1,0 +1,115 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+    
+    function hasAnyRole(roles) {
+      return isAuthenticated() && getUserData().role in roles;
+    }
+    
+    function isActiveUser() {
+      return isAuthenticated() && getUserData().isActive == true;
+    }
+    
+    function isValidImageType() {
+      return request.resource.contentType.matches('image/.*');
+    }
+    
+    function isValidFileSize(maxSizeInMB) {
+      return request.resource.size < maxSizeInMB * 1024 * 1024;
+    }
+    
+    // Profile images for users
+    match /profile-images/{userId}/{allPaths=**} {
+      allow read: if isActiveUser();
+      
+      allow write: if isActiveUser() && 
+        (hasRole('super_admin') || 
+         request.auth.uid == userId ||
+         (hasAnyRole(['school_admin', 'teacher']) && getUserData().schoolId == getUserData().schoolId)) &&
+        isValidImageType() && 
+        isValidFileSize(5); // 5MB limit
+    }
+    
+    // School logos
+    match /school-logos/{schoolId}/{allPaths=**} {
+      allow read: if isActiveUser();
+      
+      allow write: if isActiveUser() && 
+        (hasRole('super_admin') || 
+         (hasRole('school_admin') && getUserData().schoolId == schoolId)) &&
+        isValidImageType() && 
+        isValidFileSize(2); // 2MB limit
+    }
+    
+    // Student profile images
+    match /student-images/{schoolId}/{studentId}/{allPaths=**} {
+      allow read: if isActiveUser() && 
+        (hasRole('super_admin') || 
+         getUserData().schoolId == schoolId ||
+         request.auth.uid == studentId);
+      
+      allow write: if isActiveUser() && 
+        (hasRole('super_admin') || 
+         (hasAnyRole(['school_admin', 'teacher']) && getUserData().schoolId == schoolId) ||
+         request.auth.uid == studentId) &&
+        isValidImageType() && 
+        isValidFileSize(5); // 5MB limit
+    }
+    
+    // QR codes
+    match /qr-codes/{schoolId}/{studentId}/{allPaths=**} {
+      allow read: if isActiveUser() && 
+        (hasRole('super_admin') || 
+         getUserData().schoolId == schoolId);
+      
+      allow write: if isActiveUser() && 
+        (hasRole('super_admin') || 
+         (hasAnyRole(['school_admin', 'teacher']) && getUserData().schoolId == schoolId)) &&
+        isValidFileSize(1); // 1MB limit
+    }
+    
+    // Reports and documents
+    match /reports/{schoolId}/{allPaths=**} {
+      allow read: if isActiveUser() && 
+        (hasRole('super_admin') || 
+         getUserData().schoolId == schoolId);
+      
+      allow write: if isActiveUser() && 
+        (hasRole('super_admin') || 
+         (hasAnyRole(['school_admin', 'teacher']) && getUserData().schoolId == schoolId)) &&
+        isValidFileSize(10); // 10MB limit
+    }
+    
+    // Temporary uploads (for processing)
+    match /temp/{userId}/{allPaths=**} {
+      allow read, write: if isActiveUser() && 
+        request.auth.uid == userId &&
+        isValidFileSize(10); // 10MB limit
+      
+      // Auto-delete after 1 hour (handled by Cloud Functions)
+    }
+    
+    // System backups (super admin only)
+    match /backups/{allPaths=**} {
+      allow read, write: if isActiveUser() && hasRole('super_admin');
+    }
+    
+    // Deny all other requests
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Development Rules - More Permissive for Testing
+    // WARNING: DO NOT USE IN PRODUCTION
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+    
+    function hasAnyRole(roles) {
+      return isAuthenticated() && getUserData().role in roles;
+    }
+    
+    function isSameSchool(schoolId) {
+      return isAuthenticated() && getUserData().schoolId == schoolId;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // More permissive development rules
+    
+    // Users collection rules - Allow read/write for authenticated users
+    match /users/{userId} {
+      // Allow authenticated users to read all users (for development)
+      allow read: if isAuthenticated();
+      
+      // Allow authenticated users to create users
+      allow create: if isAuthenticated() || 
+        // Allow new user registration without authentication for signup
+        request.auth == null;
+      
+      // Allow authenticated users to update users
+      allow update: if isAuthenticated();
+      
+      // Allow authenticated users to delete users (be careful)
+      allow delete: if isAuthenticated() && hasAnyRole(['super_admin', 'admin']);
+    }
+    
+    // Schools collection rules
+    match /schools/{schoolId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Classes collection rules
+    match /classes/{classId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Students collection rules
+    match /students/{studentId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Attendance Records collection rules
+    match /attendanceRecords/{recordId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Attendance Sessions collection rules
+    match /attendanceSessions/{sessionId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Subjects collection rules
+    match /subjects/{subjectId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Notifications collection rules
+    match /notifications/{notificationId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // QR Codes collection
+    match /qrCodes/{qrCodeId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Analytics/Reports collection
+    match /reports/{reportId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Media collection rules
+    match /media/{mediaId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // System logs
+    match /systemLogs/{logId} {
+      allow read, write: if isAuthenticated() && hasAnyRole(['super_admin', 'admin']);
+    }
+    
+    // Development: Allow all operations for testing (REMOVE IN PRODUCTION)
+    // Uncomment the line below for completely open access during development
+    // match /{document=**} {
+    //   allow read, write: if true;
+    // }
+  }
+}

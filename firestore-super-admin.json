@@ -1,0 +1,18 @@
+{
+  "users": {
+    "REPLACE_WITH_YOUR_UID": {
+      "uid": "REPLACE_WITH_YOUR_UID",
+      "name": "System Administrator", 
+      "email": "mdlavlusheikh220@gmail.com",
+      "phone": "+880 1700000000",
+      "role": "super_admin",
+      "schoolId": "all",
+      "schoolName": "System Administrator",
+      "address": "Admin Office",
+      "isActive": true,
+      "profileImage": "",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  }
+}
