@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import {
@@ -13,9 +13,92 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import { userQueries, accountingQueries, studentQueries, teacherQueries, parentQueries } from '@/lib/database-queries';
 
 function AdminDashboard() {
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Dashboard state
+  const [dashboardData, setDashboardData] = useState({
+    students: 0,
+    teachers: 0,
+    parents: 0,
+    totalIncome: 0,
+    totalExpense: 0,
+    maleStudents: 0,
+    femaleStudents: 0,
+    mosqueCount: 0,
+    donationCollected: 0,
+    donationSpent: 0,
+    loading: true,
+    lastUpdated: null as Date | null
+  });
+
+  // Fetch dashboard data
+  const fetchDashboardData = async () => {
+    try {
+      const schoolId = 'iqra-school-2025';
+
+      // Fetch all data in parallel
+      const [
+        students,
+        teachers,
+        parents,
+        financialSummary,
+        studentStats
+      ] = await Promise.all([
+        studentQueries.getStudentsBySchool(schoolId),
+        teacherQueries.getTeachersBySchool(schoolId),
+        parentQueries.getParentsBySchool(schoolId),
+        accountingQueries.getFinancialSummary(schoolId),
+        studentQueries.getStudentStats(schoolId)
+      ]);
+
+      // Calculate donation amounts (transactions with category 'অনুদান')
+      const allTransactions = await accountingQueries.getAllTransactions(schoolId);
+      const donationTransactions = allTransactions.filter(t =>
+        t.category === 'অনুদান' && t.status === 'completed'
+      );
+
+      const donationCollected = donationTransactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      const donationSpent = donationTransactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+      setDashboardData({
+        students: students.length,
+        teachers: teachers.length,
+        parents: parents.length,
+        totalIncome: financialSummary.totalIncome,
+        totalExpense: financialSummary.totalExpense,
+        maleStudents: studentStats.studentsByGender.male || 0,
+        femaleStudents: studentStats.studentsByGender.female || 0,
+        mosqueCount: 0, // This would need to be calculated from a different source
+        donationCollected,
+        donationSpent,
+        loading: false,
+        lastUpdated: new Date()
+      });
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      setDashboardData(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  // Auto-refresh every minute
+  useEffect(() => {
+    fetchDashboardData(); // Initial fetch
+
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 60000); // 60000ms = 1 minute
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, []);
 
   // Calendar helper functions
   const getDaysInMonth = (date: Date) => {
@@ -75,13 +158,32 @@ function AdminDashboard() {
     <AdminLayout title="সুপার অ্যাডমিন ড্যাশবোর্ড" subtitle="স্বাগতম! আপনার শিক্ষা প্রতিষ্ঠানের ড্যাশবোর্ড">
       {/* Dashboard Content */}
       <div className="space-y-6">
+        {/* Last Updated and Refresh Button */}
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-gray-600">
+            {dashboardData.lastUpdated && (
+              <span>
+                সর্বশেষ আপডেট: {dashboardData.lastUpdated.toLocaleTimeString('bn-BD')}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={fetchDashboardData}
+            disabled={dashboardData.loading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+          >
+            {dashboardData.loading ? 'লোড হচ্ছে...' : 'রিফ্রেশ করুন'}
+          </button>
+        </div>
           {/* Top Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4 mb-4 lg:mb-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 lg:p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">শিক্ষার্থী</p>
-                  <p className="text-2xl font-bold text-gray-900">৮</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {dashboardData.loading ? '...' : dashboardData.students.toLocaleString('bn-BD')}
+                  </p>
                 </div>
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                   <Users className="w-5 h-5 text-blue-600" />
@@ -93,7 +195,9 @@ function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">শিক্ষক</p>
-                  <p className="text-2xl font-bold text-gray-900">৬</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {dashboardData.loading ? '...' : dashboardData.teachers.toLocaleString('bn-BD')}
+                  </p>
                 </div>
                 <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
                   <GraduationCap className="w-5 h-5 text-orange-600" />
@@ -105,7 +209,9 @@ function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">অভিভাবক</p>
-                  <p className="text-2xl font-bold text-gray-900">৮</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {dashboardData.loading ? '...' : dashboardData.parents.toLocaleString('bn-BD')}
+                  </p>
                 </div>
                 <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                   <UserCheck className="w-5 h-5 text-green-600" />
@@ -117,7 +223,9 @@ function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">মোট সংগৃহীত</p>
-                  <p className="text-2xl font-bold text-gray-900">৪৯২,৫২০</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {dashboardData.loading ? '...' : dashboardData.totalIncome.toLocaleString('bn-BD')}
+                  </p>
                 </div>
                 <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
                   <CreditCard className="w-5 h-5 text-red-600" />
@@ -129,7 +237,9 @@ function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">খরচ</p>
-                  <p className="text-2xl font-bold text-gray-900">৪৫,০০০</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {dashboardData.loading ? '...' : dashboardData.totalExpense.toLocaleString('bn-BD')}
+                  </p>
                 </div>
                 <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                   <TrendingUp className="w-5 h-5 text-purple-600" />
@@ -146,7 +256,9 @@ function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">পুরুষ</p>
-                    <p className="text-2xl font-bold text-gray-900">৫</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {dashboardData.loading ? '...' : dashboardData.maleStudents.toLocaleString('bn-BD')}
+                    </p>
                     <p className="text-xs text-gray-500">পুরুষ</p>
                   </div>
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -159,7 +271,9 @@ function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">মহিলা</p>
-                    <p className="text-2xl font-bold text-gray-900">৩</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {dashboardData.loading ? '...' : dashboardData.femaleStudents.toLocaleString('bn-BD')}
+                    </p>
                     <p className="text-xs text-gray-500">মহিলা</p>
                   </div>
                   <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center">
@@ -172,7 +286,9 @@ function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">মসজিদ</p>
-                    <p className="text-2xl font-bold text-gray-900">০</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {dashboardData.loading ? '...' : dashboardData.mosqueCount.toLocaleString('bn-BD')}
+                    </p>
                     <p className="text-xs text-gray-500">মসজিদ</p>
                   </div>
                   <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
@@ -185,7 +301,9 @@ function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">অনুদান সংগৃহীত</p>
-                    <p className="text-2xl font-bold text-gray-900">৯৫,০০০</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {dashboardData.loading ? '...' : dashboardData.donationCollected.toLocaleString('bn-BD')}
+                    </p>
                     <p className="text-xs text-gray-500">অনুদান সংগৃহীত</p>
                   </div>
                   <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -198,7 +316,9 @@ function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600 mb-1">অনুদান খরচ</p>
-                    <p className="text-2xl font-bold text-gray-900">৮৬৫০</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {dashboardData.loading ? '...' : dashboardData.donationSpent.toLocaleString('bn-BD')}
+                    </p>
                     <p className="text-xs text-gray-500">অনুদান খরচ</p>
                   </div>
                   <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
