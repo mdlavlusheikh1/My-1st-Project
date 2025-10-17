@@ -15,6 +15,7 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { SCHOOL_ID } from '../constants';
 
 // Types
 export interface Class {
@@ -112,7 +113,7 @@ export const classQueries = {
   // Create sample classes for testing
   async createSampleClasses(): Promise<void> {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const schoolName = 'ইকরা ইসলামিক স্কুল';
 
       const sampleClasses = [

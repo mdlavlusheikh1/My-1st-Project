@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Users,
   UserCheck,
@@ -37,7 +38,7 @@ function AdminDashboard() {
   // Fetch dashboard data
   const fetchDashboardData = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Fetch all data in parallel
       const [

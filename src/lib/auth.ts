@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { auth } from './firebase';
 import { userQueries } from './database-queries';
+import { SCHOOL_ID } from './constants';
 import { User } from '@/types';
 
 export class AuthService {
@@ -31,7 +32,7 @@ export class AuthService {
         uid: firebaseUser.uid,
         ...userData,
         email,
-        schoolId: userData.schoolId || 'IQRA-202531', // Default school ID if not provided
+        schoolId: userData.schoolId || SCHOOL_ID, // Default school ID if not provided
         isActive: true
       });
 

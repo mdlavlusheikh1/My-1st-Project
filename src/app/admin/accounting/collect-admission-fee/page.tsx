@@ -8,6 +8,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { studentQueries, accountingQueries, feeQueries, inventoryQueries, InventoryItem } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home,
   Users,
@@ -171,7 +172,7 @@ function CollectAdmissionFeePage() {
       setStudents(studentsData);
 
       // Get existing admission fee transactions
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const existingTransactions = await accountingQueries.getAllTransactions(schoolId);
       console.log('💰 Existing transactions:', existingTransactions.length);
 
@@ -373,7 +374,7 @@ function CollectAdmissionFeePage() {
     // Load inventory items
     try {
       setInventoryLoading(true);
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const items = await inventoryQueries.getAllInventoryItems(schoolId);
       setInventoryItems(items);
     } catch (error) {
@@ -429,7 +430,7 @@ function CollectAdmissionFeePage() {
     if (!selectedStudent) return;
 
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const paidAmount = parseFloat(formData.paidAmount) || 0;
       const discount = parseFloat(formData.discount) || 0;
       const admissionFee = parseFloat(formData.admissionFee) || 0;

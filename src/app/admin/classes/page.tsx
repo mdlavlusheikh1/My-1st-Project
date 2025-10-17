@@ -7,6 +7,7 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
 import { classQueries, settingsQueries, Class } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home,
   Users,
@@ -97,7 +98,7 @@ function ClassesPage() {
       const timestamp = new Date().getTime();
       console.log(`🔄 Loading classes at ${timestamp}`);
 
-      const schoolId = 'IQRA-202531'; // Use consistent school ID
+      const schoolId = SCHOOL_ID; // Use consistent school ID
       const classesData = await classQueries.getClassesBySchool(schoolId); // Load classes for specific school
       setClasses(classesData);
 
@@ -188,7 +189,7 @@ function ClassesPage() {
     setError('');
 
     try {
-      const schoolId = 'IQRA-202531'; // Use consistent school ID
+      const schoolId = SCHOOL_ID; // Use consistent school ID
       const schoolName = 'ইকরা নুরানী একাডেমী'; // Match the display name
 
       const classData = {

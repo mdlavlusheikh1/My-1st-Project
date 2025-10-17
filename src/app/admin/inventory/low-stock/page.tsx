@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { inventoryQueries, InventoryItem } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home, Users, BookOpen, ClipboardList, Calendar, Settings, LogOut, Menu, X,
   UserCheck, GraduationCap, Building, CreditCard, TrendingUp, Search, Bell,
@@ -40,7 +41,7 @@ function LowStockPage() {
   const loadInventoryData = async () => {
     try {
       setDataLoading(true);
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const items = await inventoryQueries.getAllInventoryItems(schoolId);
       setInventoryItems(items);
     } catch (error) {
@@ -54,7 +55,7 @@ function LowStockPage() {
   useEffect(() => {
     if (!user) return;
 
-    const schoolId = 'iqra-school-2025';
+    const schoolId = SCHOOL_ID;
 
     // Listen to inventory items changes
     const unsubscribeItems = inventoryQueries.subscribeToInventoryItems(schoolId, (items) => {

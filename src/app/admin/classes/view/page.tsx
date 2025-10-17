@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { classQueries, Class } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home,
   Users,
@@ -283,7 +284,7 @@ function ClassViewPage() {
                     <p className="text-sm font-medium text-gray-500">স্কুল আইডি</p>
                     <div className="flex items-center space-x-2">
                       <span className="text-lg font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded">
-                        IQRA-202531
+                        {SCHOOL_ID}
                       </span>
                     </div>
                   </div>

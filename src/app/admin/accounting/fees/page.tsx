@@ -9,6 +9,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { examQueries } from '@/lib/database-queries';
 import { feeQueries } from '@/lib/queries/fee-queries';
 import { studentQueries } from '@/lib/queries/student-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home,
   Users,
@@ -186,7 +187,7 @@ function FeesPage() {
       console.log('Combined classes:', combinedClasses);
 
       // Get existing fees for these classes
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const existingFees = await feeQueries.getActiveFees(schoolId);
 
       console.log('Existing fees:', existingFees);
@@ -250,7 +251,7 @@ function FeesPage() {
 
   const loadExamFeesFromFirebase = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Try to get existing exam fees document
       const examFeesRef = doc(db, 'examFees', schoolId);
@@ -279,7 +280,7 @@ function FeesPage() {
 
   const loadAdmissionFeesFromFirebase = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Try to get existing admission fees document
       const admissionFeesRef = doc(db, 'admissionFees', schoolId);
@@ -304,7 +305,7 @@ function FeesPage() {
   const loadExistingExams = async () => {
     try {
       setLoadingExams(true);
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const examsData = await examQueries.getAllExams(schoolId);
       setExistingExams(examsData);
       console.log('Loaded existing exams:', examsData);
@@ -317,7 +318,7 @@ function FeesPage() {
 
   const loadExamClassFees = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Try to get existing exam-specific fees document
       const examSpecificFeesRef = doc(db, 'examSpecificFees', schoolId);
@@ -379,7 +380,7 @@ function FeesPage() {
     setMessage('');
 
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Delete all existing fees first
       await feeQueries.deleteAllFees(schoolId);
@@ -417,7 +418,7 @@ function FeesPage() {
 
   const saveExamFees = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Save exam fees to Firebase
       const examFeesData = {
@@ -443,7 +444,7 @@ function FeesPage() {
 
   const saveAdmissionFees = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Save admission fees to Firebase
       const admissionFeesData = {
@@ -466,7 +467,7 @@ function FeesPage() {
 
   const saveExamClassFees = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Save exam-specific fees to Firebase
       const examSpecificFeesData = {
@@ -1053,12 +1054,6 @@ function FeesPage() {
                                         >
                                           ফলাফল দেখুন
                                         </button>
-                                        <button
-                                          onClick={() => router.push('/admin/exams/manage')}
-                                          className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
-                                        >
-                                          সম্পাদনা করুন
-                                        </button>
                                       </div>
                                     </div>
                                   </div>
@@ -1092,13 +1087,6 @@ function FeesPage() {
                           <span>পরীক্ষার ফি সংরক্ষণ করুন</span>
                         </button>
 
-                        <button
-                          onClick={() => router.push('/admin/exams/manage')}
-                          className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center space-x-2"
-                        >
-                          <Plus className="w-4 h-4" />
-                          <span>পরীক্ষা যোগ করুন</span>
-                        </button>
 
                         <button
                           onClick={() => router.push('/admin/accounting/collect-exam-fee')}

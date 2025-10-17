@@ -3,10 +3,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { User as AuthUser, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { studentQueries, accountingQueries, feeQueries, examQueries } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
+import { useAlert } from '@/hooks/useAlert';
+import AlertDialog from '@/components/ui/alert-dialog';
 import {
   Home,
   Users,
@@ -29,10 +32,12 @@ import {
   Phone,
   MapPin,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  Calculator
 } from 'lucide-react';
 
 function CollectExamFeePage() {
+  const { isOpen, alertOptions, showSuccess, showError, showWarning, closeAlert } = useAlert();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -133,6 +138,9 @@ function CollectExamFeePage() {
 
   const router = useRouter();
 
+  // Use the correct school ID: IQRA-202531
+  const schoolId = SCHOOL_ID;
+
   // Class name mapping utility
   const getClassKey = (className: string): string => {
     const classMap: { [key: string]: string } = {
@@ -165,7 +173,10 @@ function CollectExamFeePage() {
   const [loadingClasses, setLoadingClasses] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    let transactionUnsubscribe: (() => void) | undefined;
+    let feeCollectionUnsubscribe: (() => void) | undefined;
+    
+    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         console.log('🔐 User authenticated, loading data...');
         setUser(user);
@@ -180,13 +191,56 @@ function CollectExamFeePage() {
         loadExamFeesFromManagement();
         loadExamFeesData();
         loadFeeCollections();
+        
+        // Set up real-time listeners
+        const schoolId = SCHOOL_ID;
+        
+        // Listen to transactions
+        const transactionsRef = collection(db, 'financialTransactions');
+        const transactionsQuery = query(
+          transactionsRef,
+          where('schoolId', '==', schoolId),
+          where('category', '==', 'exam_fee'),
+          orderBy('date', 'desc')
+        );
+        
+        transactionUnsubscribe = onSnapshot(transactionsQuery, (snapshot) => {
+          console.log('🔄 Exam fee transaction updated, reloading data...');
+          loadFeeCollections();
+          loadExamFeesData();
+        }, (error) => {
+          console.error('❌ Error listening to transactions:', error);
+        });
+        
+        // Listen to fee collections
+        const feeCollectionsRef = collection(db, 'feeCollections');
+        const feeCollectionsQuery = query(
+          feeCollectionsRef,
+          where('schoolId', '==', schoolId),
+          orderBy('paymentDate', 'desc')
+        );
+        
+        feeCollectionUnsubscribe = onSnapshot(feeCollectionsQuery, (snapshot) => {
+          console.log('🔄 Fee collection updated, reloading students...');
+          loadStudents();
+        }, (error) => {
+          console.error('❌ Error listening to fee collections:', error);
+        });
       } else {
         router.push('/auth/login');
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      authUnsubscribe();
+      if (transactionUnsubscribe) {
+        transactionUnsubscribe();
+      }
+      if (feeCollectionUnsubscribe) {
+        feeCollectionUnsubscribe();
+      }
+    };
   }, [router]);
 
 
@@ -211,8 +265,6 @@ function CollectExamFeePage() {
       }
 
       // Load from Firebase - Class-wise fee management collection
-      const { doc, getDoc, collection, getDocs } = await import('firebase/firestore');
-      const schoolId = 'iqra-school-2025';
 
       // Try to load from classWiseFees collection first
       const classWiseFeesRef = doc(db, 'classWiseFees', schoolId);
@@ -294,7 +346,7 @@ function CollectExamFeePage() {
   // Load exam fees from Firebase using queries (legacy - keeping for compatibility)
   const loadExamFees = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const examFeesData = await accountingQueries.getExamFees(schoolId);
 
       console.log('Loaded legacy exam fees from Firebase:', examFeesData);
@@ -310,7 +362,7 @@ function CollectExamFeePage() {
   // Load exam fees from exam fee management system
   const loadExamFeesFromManagement = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const examFeesData = await accountingQueries.getExamFees(schoolId);
 
       console.log('📋 Loaded exam fees from management system:', examFeesData);
@@ -348,7 +400,7 @@ function CollectExamFeePage() {
   const clearSampleExamFees = async () => {
     try {
       console.log('🧹 Clearing sample exam fees data...');
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Get current exam fees
       const currentFees = await accountingQueries.getExamFees(schoolId);
@@ -384,7 +436,7 @@ function CollectExamFeePage() {
   const loadFeeCollections = async () => {
     setLoadingFeeCollections(true);
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const collections = await feeQueries.getAllFeeCollections(schoolId);
       setFeeCollections(collections);
       console.log('📋 Fee collections loaded:', collections.length);
@@ -398,28 +450,200 @@ function CollectExamFeePage() {
   const loadExamFeesData = async () => {
     setLoadingExamFeesData(true);
     try {
-      const schoolId = 'iqra-school-2025';
+      // Use standardized school ID
+      const schoolId = SCHOOL_ID;
+      const fallbackSchoolId = SCHOOL_ID;
 
-      // Load exam-specific fees from Firebase
+      console.log('🔍 Loading exams and fees for school:', schoolId);
+
+      // Load existing exams from exam management - try both school IDs
+      let examsData = await examQueries.getAllExams(schoolId);
+      console.log(`📋 Loaded ${examsData.length} exams with schoolId: ${schoolId}`);
+      
+      // Filter out deleted exams (check both boolean and string values)
+      examsData = examsData.filter((exam: any) => {
+        const isDeleted = exam.deleted === true || exam.deleted === 'true';
+        console.log(`📋 Exam ${exam.id}: deleted=${exam.deleted}, isDeleted=${isDeleted}`);
+        return !isDeleted;
+      });
+      console.log(`📋 After filtering deleted: ${examsData.length} active exams`);
+      
+      // If no exams found, try fallback school ID
+      if (examsData.length === 0) {
+        console.log(`⚠️ No exams found for ${schoolId}, trying fallback: ${fallbackSchoolId}`);
+        examsData = await examQueries.getAllExams(fallbackSchoolId);
+        examsData = examsData.filter((exam: any) => !exam.deleted);
+        console.log(`📋 Loaded ${examsData.length} active exams with fallback schoolId`);
+      }
+
+      // Load exam-specific fees from Firebase - try both school IDs
+      let examSpecificFeesData: any = {};
+      
       const examSpecificFeesRef = doc(db, 'examSpecificFees', schoolId);
       const examSpecificFeesSnap = await getDoc(examSpecificFeesRef);
 
       if (examSpecificFeesSnap.exists()) {
-        const examSpecificFeesData = examSpecificFeesSnap.data();
-        console.log('Loaded exam-specific fees from Firebase:', examSpecificFeesData);
-
-        if (examSpecificFeesData.fees) {
-          setExamFeesData(examSpecificFeesData.fees);
-        }
+        examSpecificFeesData = examSpecificFeesSnap.data();
+        console.log('✅ Loaded exam-specific fees from Firebase:', examSpecificFeesData);
       } else {
-        console.log('No exam-specific fees found in Firebase');
-        setExamFeesData({});
+        console.log(`⚠️ No exam-specific fees found for ${schoolId}, trying fallback`);
+        const fallbackFeesRef = doc(db, 'examSpecificFees', fallbackSchoolId);
+        const fallbackFeesSnap = await getDoc(fallbackFeesRef);
+        
+        if (fallbackFeesSnap.exists()) {
+          examSpecificFeesData = fallbackFeesSnap.data();
+          console.log('✅ Loaded exam-specific fees from fallback:', examSpecificFeesData);
+        } else {
+          console.log('❌ No exam-specific fees found in either location');
+        }
       }
 
-      // Load existing exams from exam management
-      const examsData = await examQueries.getAllExams(schoolId);
-      setExistingExams(examsData);
-      console.log('Loaded existing exams:', examsData);
+      // Set exam fees data
+      if (examSpecificFeesData.fees) {
+        setExamFeesData(examSpecificFeesData.fees);
+        console.log('📊 Set exam fees data:', Object.keys(examSpecificFeesData.fees).length, 'exams');
+      } else {
+        setExamFeesData({});
+        console.log('📊 No fees data available');
+      }
+      console.log('📋 Loaded existing exams from general query:', examsData.length, examsData.map((e: any) => ({ id: e.id, name: e.name })));
+
+      // Also try to load the specific exam ID: Cod5O47LZQ4of18vNZJx
+      let specificExam: any = null;
+      try {
+        specificExam = await examQueries.getExamById('Cod5O47LZQ4of18vNZJx');
+        console.log('🎯 Loaded specific exam:', specificExam);
+      } catch (error) {
+        console.log('❌ Could not load specific exam, trying alternative methods...');
+
+        // Try to load from Firebase directly
+        try {
+          const { doc, getDoc } = await import('firebase/firestore');
+          const examRef = doc(db, 'exams', 'Cod5O47LZQ4of18vNZJx');
+          const examSnap = await getDoc(examRef);
+
+          if (examSnap.exists()) {
+            specificExam = { id: examSnap.id, ...examSnap.data() };
+            console.log('✅ Loaded specific exam from Firebase directly:', specificExam);
+          } else {
+            console.log('❌ Specific exam not found in Firebase');
+          }
+        } catch (firebaseError) {
+          console.error('❌ Firebase error loading specific exam:', firebaseError);
+        }
+      }
+
+      // Combine exams, ensuring the specific exam is included and prioritized
+      let allExams = [...examsData];
+
+      // Add specific exam at the beginning if it exists and isn't already in the list
+      if (specificExam) {
+        const existingIndex = allExams.findIndex((exam: any) => exam.id === 'Cod5O47LZQ4of18vNZJx');
+        if (existingIndex === -1) {
+          allExams = [specificExam, ...allExams];
+          console.log('✅ Added specific exam to the beginning of the list');
+        } else {
+          // Move existing exam to the beginning
+          const existingExam = allExams[existingIndex];
+          allExams.splice(existingIndex, 1);
+          allExams = [existingExam, ...allExams];
+          console.log('✅ Moved existing specific exam to the beginning');
+        }
+      }
+
+      // Also try to load more exams from different sources
+      try {
+        const { collection, getDocs, query, where, doc, getDoc } = await import('firebase/firestore');
+
+        // First, try to load the specific exam document
+        try {
+          const specificExamRef = doc(db, 'exams', 'Cod5O47LZQ4of18vNZJx');
+          const specificExamSnap = await getDoc(specificExamRef);
+
+          if (specificExamSnap.exists()) {
+            const specificExamData: any = { id: specificExamSnap.id, ...specificExamSnap.data() };
+            console.log('🎯 Found specific exam document:', specificExamData);
+
+            // Add to exams list if not already present
+            if (!allExams.find((exam: any) => exam.id === 'Cod5O47LZQ4of18vNZJx')) {
+              allExams.push(specificExamData);
+              console.log('✅ Added specific exam document to list');
+            }
+          } else {
+            console.log('❌ Specific exam document not found');
+          }
+        } catch (specificError: any) {
+          console.error('❌ Error loading specific exam document:', specificError instanceof Error ? specificError.message : String(specificError));
+        }
+
+        // Load all exams from /exams collection
+        const examsRef = collection(db, 'exams');
+        const examsSnap = await getDocs(examsRef);
+
+        if (!examsSnap.empty) {
+          const allExamDocs = examsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          console.log('📚 Loaded ALL exams from /exams collection:', allExamDocs.length);
+
+          // Show detailed information about each exam
+          allExamDocs.forEach((exam: any) => {
+            console.log(`📋 Exam ID: ${exam.id}`);
+            console.log(`   Name: ${exam.name || 'N/A'}`);
+            console.log(`   Type: ${exam.examType || 'N/A'}`);
+            console.log(`   Class: ${exam.class || 'N/A'}`);
+            console.log(`   School ID: ${exam.schoolId || 'N/A'}`);
+            console.log(`   Status: ${exam.status || 'N/A'}`);
+            console.log('   ---');
+          });
+
+          // Merge with existing exams, avoiding duplicates
+          allExamDocs.forEach((examDoc: any) => {
+            if (!allExams.find((exam: any) => exam.id === examDoc.id)) {
+              allExams.push(examDoc);
+              console.log(`✅ Added exam: ${examDoc.name || examDoc.id}`);
+            }
+          });
+
+          console.log('✅ Final merged exams, total:', allExams.length);
+        } else {
+          console.log('❌ No exams found in /exams collection');
+        }
+
+        // Also try school-specific query as backup
+        try {
+          const schoolQuery = query(examsRef, where('schoolId', '==', schoolId));
+          const schoolExamsSnap = await getDocs(schoolQuery);
+
+          if (!schoolExamsSnap.empty) {
+            const schoolExams = schoolExamsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log('🏫 Loaded school-specific exams:', schoolExams.length);
+
+            schoolExams.forEach((schoolExam: any) => {
+              if (!allExams.find((exam: any) => exam.id === schoolExam.id)) {
+                allExams.push(schoolExam);
+                console.log(`✅ Added school exam: ${schoolExam.name || schoolExam.id}`);
+              }
+            });
+          }
+        } catch (schoolError) {
+          console.log('ℹ️ School-specific query failed:', schoolError instanceof Error ? schoolError.message : String(schoolError));
+        }
+
+      } catch (error) {
+        console.log('ℹ️ Could not load additional exams from Firebase:', error instanceof Error ? error.message : String(error));
+      }
+
+      // Final cleanup and deduplication
+      const uniqueExams = allExams.filter((exam, index, self) =>
+        index === self.findIndex(e => e.id === exam.id)
+      );
+
+      console.log('🎉 Final exam list:', uniqueExams.length, 'unique exams');
+      console.log('📝 Exam names:', uniqueExams.map((e: any) => ({ id: e.id, name: e.name, type: e.examType })));
+
+      setExistingExams(uniqueExams);
+
+      // Also load exam fees from management system for the dialog
+      await loadExamFeesFromManagementForDialog();
 
     } catch (error) {
       console.error('Error loading exam fees data:', error);
@@ -427,6 +651,186 @@ function CollectExamFeePage() {
       setExistingExams([]);
     } finally {
       setLoadingExamFeesData(false);
+    }
+  };
+
+  // Load exam fees from management for dialog display
+  const loadExamFeesFromManagementForDialog = async () => {
+    try {
+      const schoolId = SCHOOL_ID;
+
+      // Load exam fees directly from Firebase examFees collection
+      const { doc, getDoc, collection, getDocs } = await import('firebase/firestore');
+
+      console.log('🔍 Loading exam fees from /examFees/IQRA-202531...');
+
+      // Try to load from the specific examFees document first
+      const examFeesRef = doc(db, 'examFees', schoolId);
+      const examFeesSnap = await getDoc(examFeesRef);
+
+      let examFeesData = {};
+
+      if (examFeesSnap.exists()) {
+        examFeesData = examFeesSnap.data();
+        console.log('✅ Loaded exam fees from /examFees/IQRA-202531:', examFeesData);
+
+        // Show detailed breakdown of loaded fees
+        Object.entries(examFeesData).forEach(([examType, classFees]) => {
+          console.log(`📊 ${examType} fees:`, classFees);
+        });
+      } else {
+        console.log('❌ No exam fees document found in /examFees/IQRA-202531, trying alternative methods...');
+
+        // Try to load from examFees collection (if it's a collection, not a document)
+        try {
+          const examFeesCollectionRef = collection(db, 'examFees');
+          const examFeesCollectionSnap = await getDocs(examFeesCollectionRef);
+
+          if (!examFeesCollectionSnap.empty) {
+            console.log('📚 Found examFees as collection with', examFeesCollectionSnap.docs.length, 'documents');
+
+            // Look for IQRA-202531 document in the collection
+            const iqraDoc = examFeesCollectionSnap.docs.find(doc => doc.id === schoolId);
+            if (iqraDoc) {
+              examFeesData = iqraDoc.data();
+              console.log('✅ Loaded exam fees from examFees collection document:', examFeesData);
+            } else {
+              console.log('❌ IQRA-202531 document not found in examFees collection');
+              // Use the first document as fallback
+              const firstDoc = examFeesCollectionSnap.docs[0];
+              examFeesData = firstDoc.data();
+              console.log('📋 Using first document as fallback:', firstDoc.id, examFeesData);
+            }
+          } else {
+            console.log('❌ examFees collection is empty');
+          }
+        } catch (collectionError) {
+          console.error('❌ Error loading from examFees collection:', collectionError);
+        }
+
+        // Final fallback to accounting queries
+        if (Object.keys(examFeesData).length === 0) {
+          examFeesData = await accountingQueries.getExamFees(schoolId);
+          console.log('📋 Loaded exam fees using accounting queries as final fallback:', examFeesData);
+        }
+      }
+
+      // Store the raw exam fees data for dialog use
+      setExamFeesData(examFeesData as {[key: string]: {[className: string]: number}});
+
+      // Also try to load exam-specific fees structure
+      console.log('🔍 Looking for exam-specific fee structure...');
+      try {
+        const examSpecificFeesRef = doc(db, 'examSpecificFees', schoolId);
+        const examSpecificFeesSnap = await getDoc(examSpecificFeesRef);
+
+        if (examSpecificFeesSnap.exists()) {
+          const examSpecificData = examSpecificFeesSnap.data();
+          console.log('✅ Found exam-specific fees:', examSpecificData);
+
+          if (examSpecificData.fees) {
+            // Merge exam-specific fees with general fees
+            const mergedFees = { ...examFeesData } as {[key: string]: {[className: string]: number}};
+            Object.entries(examSpecificData.fees).forEach(([examId, examFeeData]) => {
+              if (examFeeData && typeof examFeeData === 'object') {
+                mergedFees[examId] = examFeeData as {[className: string]: number};
+              }
+            });
+            examFeesData = mergedFees;
+            console.log('✅ Merged exam-specific fees:', examFeesData);
+          }
+        } else {
+          console.log('ℹ️ No exam-specific fees found');
+        }
+      } catch (specificError) {
+        console.log('ℹ️ Could not load exam-specific fees:', specificError instanceof Error ? specificError.message : String(specificError));
+      }
+
+      // Filter out empty entries (only keep fees > 0)
+      const filteredFees = {
+        monthly: {},
+        quarterly: {},
+        halfYearly: {},
+        annual: {}
+      };
+
+      Object.entries(examFeesData).forEach(([examType, classFees]) => {
+        if (classFees && typeof classFees === 'object') {
+          const validFees = Object.fromEntries(
+            Object.entries(classFees).filter(([_, fee]) => {
+              const feeValue = typeof fee === 'string' ? parseFloat(fee) : fee;
+              return feeValue && feeValue > 0;
+            })
+          );
+
+          if (examType === 'monthly') filteredFees.monthly = validFees;
+          else if (examType === 'quarterly') filteredFees.quarterly = validFees;
+          else if (examType === 'halfYearly') filteredFees.halfYearly = validFees;
+          else if (examType === 'annual') filteredFees.annual = validFees;
+        }
+      });
+
+      setExamFeesFromManagement(filteredFees);
+      console.log('✅ Filtered exam fees for dialog from /examFees/IQRA-202531:', filteredFees);
+
+      // Also update the main examFees state for consistency - convert new field names to old structure for compatibility
+      const legacyExamFees = {
+        monthly: {},
+        quarterly: {},
+        halfYearly: {},
+        annual: {}
+      };
+
+      // Map new field names back to old structure for this page's compatibility
+      Object.entries(examFeesData).forEach(([fieldName, classFees]) => {
+        if (fieldName === 'First Term Examination Fee') {
+          legacyExamFees.quarterly = classFees as { [className: string]: number };
+        } else if (fieldName === 'Second Term Examination Fee') {
+          legacyExamFees.quarterly = { ...legacyExamFees.quarterly, ...classFees as { [className: string]: number } };
+        } else if (fieldName === 'Annual Examination Fee') {
+          legacyExamFees.annual = classFees as { [className: string]: number };
+        } else if (fieldName === 'Monthly Examination Fee') {
+          legacyExamFees.monthly = classFees as { [className: string]: number };
+        }
+      });
+
+      setExamFees(legacyExamFees);
+
+      console.log('🎉 Exam fees loaded successfully from /examFees/IQRA-202531');
+
+    } catch (error) {
+      console.error('❌ Error loading exam fees for dialog:', error);
+      // Try alternative loading method - convert new field names to old structure for compatibility
+      try {
+        const schoolId = SCHOOL_ID;
+        const examFeesData = await accountingQueries.getExamFees(schoolId);
+
+        // Convert new field names back to old structure for this page's compatibility
+        const legacyExamFees = {
+          monthly: {},
+          quarterly: {},
+          halfYearly: {},
+          annual: {}
+        };
+
+        // Map new field names back to old structure
+        Object.entries(examFeesData).forEach(([fieldName, classFees]) => {
+          if (fieldName === 'First Term Examination Fee') {
+            legacyExamFees.quarterly = classFees as { [className: string]: number };
+          } else if (fieldName === 'Second Term Examination Fee') {
+            legacyExamFees.quarterly = { ...legacyExamFees.quarterly, ...classFees as { [className: string]: number } };
+          } else if (fieldName === 'Annual Examination Fee') {
+            legacyExamFees.annual = classFees as { [className: string]: number };
+          } else if (fieldName === 'Monthly Examination Fee') {
+            legacyExamFees.monthly = classFees as { [className: string]: number };
+          }
+        });
+
+        setExamFees(legacyExamFees);
+        console.log('📋 Loaded exam fees using alternative method:', legacyExamFees);
+      } catch (fallbackError) {
+        console.error('❌ Fallback method also failed:', fallbackError);
+      }
     }
   };
 
@@ -449,7 +853,7 @@ function CollectExamFeePage() {
         const { classQueries } = await import('@/lib/queries/class-queries');
 
         // Try to get classes by school ID first
-        const schoolClasses = await classQueries.getClassesBySchool('IQRA-202531');
+        const schoolClasses = await classQueries.getClassesBySchool(SCHOOL_ID);
         console.log('📋 Classes found by school ID:', schoolClasses.length);
 
         if (schoolClasses.length > 0) {
@@ -592,12 +996,12 @@ function CollectExamFeePage() {
   // Handle fee collection for selected students
   const handleFeeCollection = async () => {
     if (selectedStudents.length === 0) {
-      alert('অনুগ্রহ করে কোনো শিক্ষার্থী নির্বাচন করুন।');
+      showWarning('অনুগ্রহ করে কোনো শিক্ষার্থী নির্বাচন করুন।');
       return;
     }
 
     if (!selectedExamType) {
-      alert('অনুগ্রহ করে পরীক্ষার ধরন নির্বাচন করুন।');
+      showWarning('অনুগ্রহ করে পরীক্ষার ধরন নির্বাচন করুন।');
       return;
     }
 
@@ -616,7 +1020,7 @@ function CollectExamFeePage() {
                         selectedExamType === 'halfYearly' ? 'অর্ধবার্ষিক' : 'বার্ষিক'} পরীক্ষার ফি - ${student.name || student.displayName}`,
           date: new Date().toISOString().split('T')[0],
           status: 'completed' as const,
-          schoolId: 'iqra-school-2025',
+          schoolId: SCHOOL_ID,
           recordedBy: user?.email || 'admin',
           paymentMethod: 'cash' as const,
           studentId: student.uid,
@@ -664,7 +1068,7 @@ function CollectExamFeePage() {
           paymentMethod: 'cash',
           transactionId: transactionIds[index],
           collectedBy: user?.email?.split('@')[0] || 'admin',
-          schoolId: 'iqra-school-2025'
+          schoolId: SCHOOL_ID
         });
       });
 
@@ -675,10 +1079,10 @@ function CollectExamFeePage() {
       // Reload fee collections to update status
       loadFeeCollections();
 
-      alert(`সফলভাবে ${selectedStudents.length} জন শিক্ষার্থীর পরীক্ষার ফি সংগ্রহ করা হয়েছে!`);
+      showSuccess(`সফলভাবে ${selectedStudents.length} জন শিক্ষার্থীর পরীক্ষার ফি সংগ্রহ করা হয়েছে!`);
     } catch (error) {
       console.error('Error saving exam fees:', error);
-      alert('ফি সংগ্রহ করতে ত্রুটি হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+      showError('ফি সংগ্রহ করতে ত্রুটি হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
     } finally {
       setIsSubmitting(false);
     }
@@ -695,7 +1099,182 @@ function CollectExamFeePage() {
     setCollectionDate(new Date().toISOString().split('T')[0]);
   };
 
-  // Calculate exam fee based on exam type and student class
+  // Calculate exam fee for a specific exam and student
+  const calculateFeeForExam = (exam: any, student: any) => {
+    if (!exam || !student) {
+      console.log('❌ No exam or student provided for fee calculation');
+      return 0;
+    }
+
+    const studentClass = student.class || 'প্রথম';
+    console.log('🔍 Calculating fee for exam:', exam.name, 'examType:', exam.examType, 'examId:', exam.id, 'student:', student.name, 'class:', studentClass);
+
+    // Method 1: Try unified structure (fees stored in exam document) - PRIORITY
+    if (exam.fees && typeof exam.fees === 'object') {
+      console.log('📋 Found fees in exam document (unified structure):', exam.fees);
+      
+      // Try exact class name match
+      if (exam.fees[studentClass]) {
+        const fee = exam.fees[studentClass];
+        console.log('✅ Found fee in exam.fees (exact match):', studentClass, fee);
+        return typeof fee === 'string' ? parseFloat(fee) : fee;
+      }
+
+      // Try class name variations
+      const classVariations = [
+        studentClass.trim(),
+        studentClass.toLowerCase(),
+        studentClass.toUpperCase()
+      ];
+
+      for (const variation of classVariations) {
+        if (exam.fees[variation]) {
+          const fee = exam.fees[variation];
+          console.log('✅ Found fee in exam.fees (variation match):', variation, fee);
+          return typeof fee === 'string' ? parseFloat(fee) : fee;
+        }
+      }
+
+      console.log('⚠️ Available classes in exam.fees:', Object.keys(exam.fees));
+    }
+
+    // Method 2: Try examFeesData (backward compatibility for old exams)
+    if (examFeesData[exam.id]) {
+      console.log('📋 Found exam in examFeesData (old structure):', exam.id, examFeesData[exam.id]);
+      
+      if (examFeesData[exam.id][studentClass]) {
+        const fee = examFeesData[exam.id][studentClass];
+        console.log('✅ Found exam-specific fee (old structure):', exam.id, studentClass, fee);
+        return typeof fee === 'string' ? parseFloat(fee) : fee;
+      }
+    }
+
+    // Method 3: Try with class key mapping
+    const classKey = getClassKey(studentClass);
+    if (exam.fees && exam.fees[classKey]) {
+      const fee = exam.fees[classKey];
+      console.log('✅ Found fee with class key:', classKey, fee);
+      return typeof fee === 'string' ? parseFloat(fee) : fee;
+    }
+
+    // Method 3: Try exam type lookup in examFeesData (type-based fees)
+    if (examFeesData[exam.examType] && examFeesData[exam.examType][studentClass]) {
+      const fee = examFeesData[exam.examType][studentClass];
+      console.log('✅ Found type-based fee:', exam.examType, studentClass, fee);
+      return typeof fee === 'string' ? parseFloat(fee) : fee;
+    }
+
+    if (examFeesData[exam.examType] && examFeesData[exam.examType][classKey]) {
+      const fee = examFeesData[exam.examType][classKey];
+      console.log('✅ Found type-based fee with class key:', exam.examType, classKey, fee);
+      return typeof fee === 'string' ? parseFloat(fee) : fee;
+    }
+
+    // Method 4: Map Bengali exam types to English for management system lookup
+    const englishExamType = exam.examType === 'প্রথম সাময়িক' ? 'quarterly' :
+                            exam.examType === 'দ্বিতীয় সাময়িক' ? 'quarterly' :
+                            exam.examType === 'তৃতীয় সাময়িক' ? 'halfYearly' :
+                            exam.examType === 'সাময়িক' ? 'quarterly' :
+                            exam.examType === 'বার্ষিক' ? 'annual' :
+                            exam.examType === 'মাসিক' ? 'monthly' :
+                            exam.examType === 'ত্রৈমাসিক' ? 'quarterly' :
+                            exam.examType === 'অর্ধবার্ষিক' ? 'halfYearly' : 'quarterly';
+
+    console.log('🔄 Mapped exam type:', exam.examType, '→', englishExamType);
+
+    // Method 5: Try English exam type in management system
+    const examTypeFeesFromManagement = examFeesFromManagement[englishExamType];
+    if (examTypeFeesFromManagement) {
+      console.log('🔍 Looking in management system for:', englishExamType, examTypeFeesFromManagement);
+
+      if (examTypeFeesFromManagement[studentClass]) {
+        const fee = examTypeFeesFromManagement[studentClass];
+        console.log('✅ Found fee from management system:', englishExamType, studentClass, fee);
+        return typeof fee === 'string' ? parseFloat(fee) : fee;
+      }
+
+      if (examTypeFeesFromManagement[classKey]) {
+        const fee = examTypeFeesFromManagement[classKey];
+        console.log('✅ Found fee from management system with class key:', englishExamType, classKey, fee);
+        return typeof fee === 'string' ? parseFloat(fee) : fee;
+      }
+    }
+
+    // Method 6: Try to find exam-specific fees in examFeesData by searching all keys
+    for (const [key, fees] of Object.entries(examFeesData)) {
+      if (fees && typeof fees === 'object' && fees[studentClass]) {
+        const fee = fees[studentClass];
+        console.log('✅ Found fee by searching all keys:', key, studentClass, fee);
+        return typeof fee === 'string' ? parseFloat(fee) : fee;
+      }
+      if (fees && typeof fees === 'object' && fees[classKey]) {
+        const fee = fees[classKey];
+        console.log('✅ Found fee by searching all keys with class key:', key, classKey, fee);
+        return typeof fee === 'string' ? parseFloat(fee) : fee;
+      }
+    }
+
+    // Method 7: Final fallback to class-wise fees
+    if (feeStructure?.examFees?.[studentClass]) {
+      const fee = feeStructure.examFees[studentClass];
+      console.log('✅ Found fee from class-wise structure:', studentClass, fee);
+      return typeof fee === 'string' ? parseFloat(fee) : fee;
+    }
+
+    // Method 8: Ultimate fallback - different default values for different exam types
+    const examTypeDefaults: {[key: string]: {[className: string]: number}} = {
+      'quarterly': {
+        'প্লে': 200,
+        'নার্সারি': 250,
+        'প্রথম': 300,
+        'দ্বিতীয়': 350,
+        'তৃতীয়': 400,
+        'চতুর্থ': 450,
+        'পঞ্চম': 500,
+        'ষষ্ঠ': 550,
+        'সপ্তম': 600,
+        'অষ্টম': 650,
+        'নবম': 700,
+        'দশম': 800
+      },
+      'halfYearly': {
+        'প্লে': 400,
+        'নার্সারি': 500,
+        'প্রথম': 600,
+        'দ্বিতীয়': 700,
+        'তৃতীয়': 800,
+        'চতুর্থ': 900,
+        'পঞ্চম': 1000,
+        'ষষ্ঠ': 1100,
+        'সপ্তম': 1200,
+        'অষ্টম': 1300,
+        'নবম': 1400,
+        'দশম': 1500
+      },
+      'annual': {
+        'প্লে': 800,
+        'নার্সারি': 1000,
+        'প্রথম': 1200,
+        'দ্বিতীয়': 1400,
+        'তৃতীয়': 1600,
+        'চতুর্থ': 1800,
+        'পঞ্চম': 2000,
+        'ষষ্ঠ': 2200,
+        'সপ্তম': 2400,
+        'অষ্টম': 2600,
+        'নবম': 2800,
+        'দশম': 3000
+      }
+    };
+
+    const examTypeDefaultsForExam = examTypeDefaults[englishExamType] || examTypeDefaults['quarterly'];
+    const fee = examTypeDefaultsForExam[studentClass] || 150;
+
+    console.log('📝 Using exam-type-specific default fee:', englishExamType, studentClass, fee);
+    return fee;
+  };
+
+  // Calculate exam fee based on exam type and student class (legacy function)
   const calculateExamFee = (examType: 'monthly' | 'quarterly' | 'halfYearly' | 'annual' | '', student: any) => {
     if (!examType || !student) return 0;
 
@@ -759,25 +1338,29 @@ function CollectExamFeePage() {
 
   const handleDialogFormSubmit = async () => {
     if (!selectedStudentForFee || !dialogExamId || !paidAmount) {
-      alert('অনুগ্রহ করে সকল তথ্য পূরণ করুন।');
+      showWarning('অনুগ্রহ করে সকল তথ্য পূরণ করুন।');
       return;
     }
 
     const selectedExam = existingExams.find(ex => ex.id === dialogExamId);
     if (!selectedExam) {
-      alert('অনুগ্রহ করে একটি পরীক্ষা নির্বাচন করুন।');
+      showWarning('অনুগ্রহ করে একটি পরীক্ষা নির্বাচন করুন।');
       return;
     }
 
     // Check if month is selected for monthly exams
     if (selectedExam.examType === 'মাসিক' && !selectedMonth) {
-      alert('অনুগ্রহ করে মাস নির্বাচন করুন।');
+      showWarning('অনুগ্রহ করে মাস নির্বাচন করুন।');
       return;
     }
 
     setIsSubmitting(true);
     try {
+      // Use the actual paid amount entered by user
+      const actualPaidAmount = parseFloat(paidAmount) || 0;
       const examFeeAmount = examFeesData[dialogExamId]?.[selectedStudentForFee.class] || 0;
+
+      console.log('💰 Saving transaction - Expected:', examFeeAmount, 'Paid:', actualPaidAmount);
 
       // Get month name for monthly exams
       const getMonthName = (monthValue: string) => {
@@ -789,11 +1372,11 @@ function CollectExamFeePage() {
       const transactionData: any = {
         type: 'income' as const,
         category: 'exam_fee',
-        amount: examFeeAmount,
+        amount: actualPaidAmount, // ← Use actual paid amount
         description: `${selectedExam.name}${selectedExam.examType === 'মাসিক' && selectedMonth ? ` (${getMonthName(selectedMonth)})` : ''} পরীক্ষার ফি - ${selectedStudentForFee.name || selectedStudentForFee.displayName}`,
         date: collectionDate,
         status: 'completed' as const,
-        schoolId: 'iqra-school-2025',
+        schoolId: SCHOOL_ID,
         recordedBy: user?.email || 'admin',
         paymentMethod: 'cash' as const,
         studentId: selectedStudentForFee.uid,
@@ -822,25 +1405,25 @@ function CollectExamFeePage() {
         studentName: selectedStudentForFee.name || selectedStudentForFee.displayName,
         classId: selectedStudentForFee.classId || selectedStudentForFee.class || 'unknown',
         className: selectedStudentForFee.class || 'N/A',
-        amount: examFeeAmount,
+        amount: actualPaidAmount, // ← Use actual paid amount
         lateFee: 0,
-        totalAmount: examFeeAmount,
+        totalAmount: actualPaidAmount, // ← Use actual paid amount
         paymentDate: collectionDate,
         dueDate: collectionDate, // Same as payment date for collected fees
         status: 'paid',
         paymentMethod: 'cash',
         transactionId: transactionId,
         collectedBy: user?.email?.split('@')[0] || 'admin',
-        schoolId: 'iqra-school-2025'
+        schoolId: SCHOOL_ID
       });
 
       closeDialog();
       // Reload fee collections to update status
       loadFeeCollections();
-      alert('সফলভাবে পরীক্ষার ফি সংগ্রহ করা হয়েছে!');
+      showSuccess('সফলভাবে পরীক্ষার ফি সংগ্রহ করা হয়েছে!');
     } catch (error) {
       console.error('Error saving exam fee:', error);
-      alert('ফি সংগ্রহ করতে ত্রুটি হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
+      showError('ফি সংগ্রহ করতে ত্রুটি হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।');
     } finally {
       setIsSubmitting(false);
     }
@@ -1206,10 +1789,25 @@ function CollectExamFeePage() {
                             onClick={() => {
                               console.log('👤 Opening dialog for student:', student);
                               setSelectedStudentForFee(student);
-                              setDialogExamId(''); // Start with no exam selected
+
+                              // Auto-load first available exam if exists
+                              if (existingExams.length > 0) {
+                                const firstExam = existingExams[0];
+                                setDialogExamId(firstExam.id);
+
+                                // Auto-calculate fee for this exam and student using the proper function
+                                const examFeeAmount = calculateFeeForExam(firstExam, student);
+                                setTotalFee(examFeeAmount.toString());
+                                setPaidAmount(examFeeAmount.toString());
+
+                                console.log('✅ Auto-loaded exam:', firstExam.name, 'Student:', student.name, 'Class:', student.class, 'Fee:', examFeeAmount);
+                              } else {
+                                setDialogExamId('');
+                                setTotalFee('0');
+                                setPaidAmount('0');
+                              }
+
                               setShowFeeDialog(true);
-                              setTotalFee('0');
-                              setPaidAmount('0');
                             }}
                             className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 text-sm font-medium flex items-center space-x-1"
                           >
@@ -1301,34 +1899,40 @@ function CollectExamFeePage() {
         </div>
       </div>
 
-      {/* Fee Collection Dialog */}
+      {/* Fee Collection Dialog - Clean & Simple */}
       {showFeeDialog && selectedStudentForFee && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
             {/* Dialog Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  ফি সংগ্রহ করুন: {selectedStudentForFee.displayName || selectedStudentForFee.name || 'Unknown Student'}
-                </h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  রোল: {selectedStudentForFee.studentId || 'N/A'} | শ্রেণি: {selectedStudentForFee.class || 'প্রথম'} - A
+                <h2 className="text-lg font-bold text-gray-900">ফি সংগ্রহ করুন</h2>
+                <p className="text-sm text-gray-600">
+                  {selectedStudentForFee.displayName || selectedStudentForFee.name || 'Unknown Student'}
                 </p>
               </div>
               <button
                 onClick={closeDialog}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Dialog Body */}
-            <div className="p-6 space-y-6">
+            <div className="p-4 space-y-4">
+              {/* Student Info */}
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-sm text-gray-600 space-y-1">
+                  <p><span className="font-medium">রোল:</span> {selectedStudentForFee.studentId || 'N/A'}</p>
+                  <p><span className="font-medium">ক্লাস:</span> {selectedStudentForFee.class || 'প্রথম'}</p>
+                </div>
+              </div>
+
               {/* Exam Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  পরীক্ষা
+                  পরীক্ষা নির্বাচন করুন
                 </label>
                 <select
                   value={dialogExamId}
@@ -1336,149 +1940,92 @@ function CollectExamFeePage() {
                     const examId = e.target.value;
                     setDialogExamId(examId);
                     const exam = existingExams.find(ex => ex.id === examId);
+
                     if (exam && selectedStudentForFee) {
-                      const fee = examFeesData[examId]?.[selectedStudentForFee.class] || 0;
+                      console.log('🔍 Calculating fee for exam:', exam.name, 'student:', selectedStudentForFee.name, 'class:', selectedStudentForFee.class);
+
+                      // Calculate fee for this exam and student
+                      const fee = calculateFeeForExam(exam, selectedStudentForFee);
+
+                      console.log('💰 Calculated fee:', fee, 'for exam:', exam.name);
                       setTotalFee(fee.toString());
                       setPaidAmount(fee.toString());
                     } else {
+                      console.log('❌ No exam or student selected for fee calculation');
                       setTotalFee('0');
                       setPaidAmount('0');
-                    }
-                    // Reset month if not monthly
-                    if (exam?.examType !== 'মাসিক') {
-                      setSelectedMonth('');
                     }
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">পরীক্ষা নির্বাচন করুন</option>
-                  {existingExams.map((exam) => (
-                    <option key={exam.id} value={exam.id}>
-                      {exam.name}
-                    </option>
-                  ))}
+                  {existingExams.length === 0 ? (
+                    <option value="" disabled>কোনো পরীক্ষা পাওয়া যায়নি</option>
+                  ) : (
+                    existingExams.map((exam) => (
+                      <option key={exam.id} value={exam.id}>
+                        {exam.name} ({exam.examType})
+                      </option>
+                    ))
+                  )}
                 </select>
+                {existingExams.length === 0 && (
+                  <p className="mt-2 text-sm text-red-600">
+                    ⚠️ কোনো পরীক্ষা পাওয়া যায়নি। অনুগ্রহ করে প্রথমে <a href="/admin/exams/exam-fee-management" className="underline font-medium">পরীক্ষার ফি ম্যানেজমেন্ট</a> পেজে গিয়ে পরীক্ষার ফি সেট করুন।
+                  </p>
+                )}
               </div>
 
-              {/* Month Selection - Only show for monthly exams */}
-              {(() => {
-                const selectedExam = existingExams.find(ex => ex.id === dialogExamId);
-                return selectedExam?.examType === 'মাসিক' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      মাস <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={selectedMonth}
-                      onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">মাস নির্বাচন করুন</option>
-                      {monthOptions.map((month) => (
-                        <option key={month.value} value={month.value}>
-                          {month.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                );
-              })()}
-
-
-
-              {/* Total Fee and Paid Amount Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Total Fee */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    মোট ফি
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">৳</span>
-                    <input
-                      type="number"
-                      value={totalFee}
-                      readOnly
-                      className="w-full pl-8 pr-3 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-
-                {/* Paid Amount */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    প্রদত্ত পরিমাণ <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={paidAmount}
-                      onChange={(e) => setPaidAmount(e.target.value)}
-                      className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg"
-                      placeholder="120"
-                    />
-                  </div>
+              {/* Fee Display */}
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700">মোট ফি:</span>
+                  <span className="text-lg font-bold text-blue-600">৳{totalFee}</span>
                 </div>
               </div>
 
-              {/* Logged User and Date Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Logged User */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    আদায়কারী
-                  </label>
-                  <input
-                    type="text"
-                    value={user?.email?.split('@')[0] || 'admin'}
-                    readOnly
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+              {/* Paid Amount Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  প্রদত্ত পরিমাণ
+                </label>
+                <input
+                  type="number"
+                  value={paidAmount}
+                  onChange={(e) => setPaidAmount(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="ফি পরিমাণ লিখুন"
+                />
+              </div>
 
-                {/* Date */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    তারিখ <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={collectionDate}
-                    onChange={(e) => setCollectionDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+              {/* Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  তারিখ
+                </label>
+                <input
+                  type="date"
+                  value={collectionDate}
+                  onChange={(e) => setCollectionDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </div>
 
             {/* Dialog Footer */}
-            <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+            <div className="flex items-center justify-end space-x-3 p-4 border-t border-gray-200">
               <button
                 onClick={closeDialog}
-                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
-                বাতিল করুন
+                বাতিল
               </button>
               <button
                 onClick={handleDialogFormSubmit}
-                disabled={isSubmitting || !dialogExamId || !paidAmount || paidAmount === '0' || (() => {
-                  const selectedExam = existingExams.find(ex => ex.id === dialogExamId);
-                  return selectedExam?.examType === 'মাসিক' && !selectedMonth;
-                })()}
-                className="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-3 rounded-xl hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 font-semibold text-base shadow-lg hover:shadow-xl"
+                disabled={!dialogExamId || !paidAmount || paidAmount === '0'}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>সংরক্ষণ করছে...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    <span>সংরক্ষণ করুন</span>
-                  </>
-                )}
+                সংগ্রহ করুন
               </button>
             </div>
           </div>
@@ -1487,7 +2034,7 @@ function CollectExamFeePage() {
 
       {/* Exam Selection Dialog */}
       {showExamSelectionDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-y-auto">
             {/* Dialog Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -1542,17 +2089,29 @@ function CollectExamFeePage() {
                   {/* Show exams of selected type */}
                   {selectedExamTypeForDialog && (
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        {selectedExamTypeForDialog === 'প্রথম সাময়িক' && 'প্রথম সাময়িক পরীক্ষা'}
-                        {selectedExamTypeForDialog === 'দ্বিতীয় সাময়িক' && 'দ্বিতীয় সাময়িক পরীক্ষা'}
-                        {selectedExamTypeForDialog === 'তৃতীয় সাময়িক' && 'তৃতীয় সাময়িক পরীক্ষা'}
-                        {selectedExamTypeForDialog === 'সাময়িক' && 'সাময়িক পরীক্ষা'}
-                        {selectedExamTypeForDialog === 'বার্ষিক' && 'বার্ষিক পরীক্ষা'}
-                        {selectedExamTypeForDialog === 'মাসিক' && 'মাসিক পরীক্ষা'}
-                        {selectedExamTypeForDialog === 'নির্বাচনী' && 'নির্বাচনী পরীক্ষা'}
-                        {selectedExamTypeForDialog === 'পরীক্ষামূলক' && 'পরীক্ষামূলক পরীক্ষা'}
-                        {selectedExamTypeForDialog === 'অন্যান্য' && 'অন্যান্য পরীক্ষা'}
-                      </h3>
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {selectedExamTypeForDialog === 'প্রথম সাময়িক' && 'প্রথম সাময়িক পরীক্ষা'}
+                          {selectedExamTypeForDialog === 'দ্বিতীয় সাময়িক' && 'দ্বিতীয় সাময়িক পরীক্ষা'}
+                          {selectedExamTypeForDialog === 'তৃতীয় সাময়িক' && 'তৃতীয় সাময়িক পরীক্ষা'}
+                          {selectedExamTypeForDialog === 'সাময়িক' && 'সাময়িক পরীক্ষা'}
+                          {selectedExamTypeForDialog === 'বার্ষিক' && 'বার্ষিক পরীক্ষা'}
+                          {selectedExamTypeForDialog === 'মাসিক' && 'মাসিক পরীক্ষা'}
+                          {selectedExamTypeForDialog === 'নির্বাচনী' && 'নির্বাচনী পরীক্ষা'}
+                          {selectedExamTypeForDialog === 'পরীক্ষামূলক' && 'পরীক্ষামূলক পরীক্ষা'}
+                          {selectedExamTypeForDialog === 'অন্যান্য' && 'অন্যান্য পরীক্ষা'}
+                        </h3>
+
+                        {/* Show fee management summary */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                          <div className="flex items-center space-x-2 text-sm">
+                            <Calculator className="w-4 h-4 text-blue-600" />
+                            <span className="text-blue-800 font-medium">
+                              ফি ম্যানেজমেন্ট থেকে লোড করা হয়েছে
+                            </span>
+                          </div>
+                        </div>
+                      </div>
 
                       {(() => {
                         let examsOfType = [];
@@ -1633,7 +2192,7 @@ function CollectExamFeePage() {
                                       <button
                                         onClick={() => {
                                           setShowExamSelectionDialog(false);
-                                          alert(`ফি সংগ্রহ শুরু করুন: ${exam.name}`);
+                                          showSuccess(`ফি সংগ্রহ শুরু করুন: ${exam.name}`);
                                         }}
                                         className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
                                         disabled={!hasFeesForThisExam}
@@ -1675,6 +2234,13 @@ function CollectExamFeePage() {
           </div>
         </div>
       )}
+
+      {/* Alert Dialog */}
+      <AlertDialog
+        isOpen={isOpen}
+        onClose={closeAlert}
+        {...alertOptions}
+      />
     </div>
   );
 }

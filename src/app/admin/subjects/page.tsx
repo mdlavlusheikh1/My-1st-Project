@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { User as AuthUser, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { subjectQueries } from '@/lib/database-queries';
+import { subjectQueries, Subject, Class } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home, Users, BookOpen, ClipboardList, Calendar, Settings, LogOut, Menu, X,
   UserCheck, GraduationCap, Building, CreditCard, TrendingUp, Search, Bell,
@@ -19,16 +20,16 @@ function SubjectsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Subject management states
-  const [subjects, setSubjects] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState<any>(null);
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
 
   // Classes management states
-  const [classes, setClasses] = useState<any[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(false);
 
   // Form states
@@ -55,29 +56,41 @@ function SubjectsPage() {
       }
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    // Reload subjects when window regains focus (in case subjects were created in other pages)
+    const handleFocus = () => {
+      console.log('🔄 Subjects page focused, reloading from Firebase...');
+      loadSubjects();
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [router]);
 
   // Load subjects from Firebase
   const loadSubjects = async () => {
     try {
       setLoadingSubjects(true);
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       let subjectsData = await subjectQueries.getActiveSubjects(schoolId);
 
-      // If no subjects exist, create sample data
-      if (subjectsData.length === 0) {
-        console.log('No subjects found, creating sample data...');
-        await subjectQueries.createSampleSubjects();
-        subjectsData = await subjectQueries.getActiveSubjects(schoolId);
-        console.log('Created and loaded sample subjects:', subjectsData);
-      } else {
-        console.log('Loaded subjects from Firebase:', subjectsData);
-      }
+      // Filter out exam-specific subjects - only show regular subjects in main subjects page
+      subjectsData = subjectsData.filter(subject => !subject.isExamSubject);
+
+      // Show only real subjects, don't create samples automatically
+      console.log('Loaded subjects from Firebase:', subjectsData.length);
+      console.log('Filtered out exam-specific subjects');
 
       setSubjects(subjectsData);
     } catch (error) {
       console.error('Error loading subjects:', error);
+      setSubjects([]);
+      // Show user-friendly error message instead of just logging
+      alert('বিষয়সমূহ লোড করতে ব্যর্থ হয়েছে। পৃষ্ঠাটি রিফ্রেশ করে আবার চেষ্টা করুন।');
     } finally {
       setLoadingSubjects(false);
     }
@@ -176,7 +189,7 @@ function SubjectsPage() {
         credits: 1, // Default value
         type: subjectForm.type,
         description: subjectForm.description,
-        schoolId: 'iqra-school-2025',
+        schoolId: SCHOOL_ID,
         createdBy: user?.email || 'admin',
         isActive: true
       };
@@ -241,7 +254,7 @@ function SubjectsPage() {
   };
 
   // Open edit dialog with subject data
-  const openEditDialog = (subject: any) => {
+  const openEditDialog = (subject: Subject) => {
     setSelectedSubject(subject);
     setSubjectForm({
       name: subject.name || '',
@@ -256,7 +269,7 @@ function SubjectsPage() {
   };
 
   // Open delete confirmation dialog
-  const openDeleteDialog = (subject: any) => {
+  const openDeleteDialog = (subject: Subject) => {
     setSelectedSubject(subject);
     setShowDeleteDialog(true);
   };

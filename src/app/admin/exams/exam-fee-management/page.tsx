@@ -2,17 +2,21 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import AdminLayout from '@/components/AdminLayout';
 import Modal from '@/components/ui/modal';
 import { accountingQueries } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
+import { useGlobalAlert } from '@/contexts/AlertContext';
 import {
   ArrowLeft, Save, Edit, DollarSign,
-  BookOpen, Loader2, CheckCircle, Calculator
+  BookOpen, Loader2, CheckCircle, Calculator, Trash2
 } from 'lucide-react';
 
 function ExamFeeManagementPage() {
+  const { showSuccess, showError, showWarning, showConfirm } = useGlobalAlert();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [classes, setClasses] = useState<any[]>([]);
@@ -23,12 +27,19 @@ function ExamFeeManagementPage() {
 
 
   const [editingType, setEditingType] = useState<string | null>(null);
+  const [editingExamId, setEditingExamId] = useState<string | null>(null);
   const [tempFees, setTempFees] = useState<{[className: string]: number}>({});
   const [saving, setSaving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  
+  // New exam creation states
+  const [showAddExamModal, setShowAddExamModal] = useState(false);
+  const [newExamName, setNewExamName] = useState('');
+  const [newExamType, setNewExamType] = useState('');
+  const [newExamFees, setNewExamFees] = useState<{[className: string]: number}>({});
 
   const router = useRouter();
-  const schoolId = 'IQRA-202531'; // Match the actual school ID from your classes
+  const schoolId = SCHOOL_ID; // Match the actual school ID from your classes
 
   // Load data on component mount
   useEffect(() => {
@@ -36,8 +47,53 @@ function ExamFeeManagementPage() {
       loadClasses();
       loadActualExams();
       loadExamFees();
+
+      // Set up real-time listener for exam changes
+      let unsubscribe: (() => void) | undefined;
+
+      setupExamListener().then((unsub) => {
+        unsubscribe = unsub;
+      });
+
+      // Cleanup function to unsubscribe from listener
+      return () => {
+        if (unsubscribe) {
+          unsubscribe();
+          console.log('🔌 Unsubscribed from exam listener');
+        }
+      };
     }
   }, [user]);
+
+  // Set up real-time listener for exam changes
+  const setupExamListener = async () => {
+    try {
+      const { examQueries } = await import('@/lib/database-queries');
+
+      // Subscribe to exam changes for the school
+      const unsubscribe = examQueries.subscribeToExams(
+        schoolId,
+        (updatedExams) => {
+          console.log('🔄 Exams updated in real-time:', updatedExams.length);
+          // Filter out deleted exams
+          const activeExams = updatedExams.filter((exam: any) => {
+            const isDeleted = exam.deleted === true || exam.deleted === 'true';
+            return !isDeleted;
+          });
+          console.log('🔄 Active exams after filtering:', activeExams.length);
+          setActualExams(activeExams);
+        },
+        (error) => {
+          console.error('❌ Error listening to exam updates:', error);
+        }
+      );
+
+      // Store unsubscribe function to clean up on unmount
+      return unsubscribe;
+    } catch (error) {
+      console.error('❌ Error setting up exam listener:', error);
+    }
+  };
 
   // Auto-close success modal after 3 seconds
   useEffect(() => {
@@ -73,52 +129,30 @@ function ExamFeeManagementPage() {
     return labelMap[standardKey] || 'অন্যান্য পরীক্ষা';
   };
 
-  // Use actual exams from exam management page, with fallback to default types
+  // Load actual exam types from exam management system
   const examTypes = useMemo(() => {
-    console.log('📋 Creating exam types from actual exams:', actualExams.length);
+    console.log('📋 Creating exam cards from actual exams:', actualExams.length);
 
     if (actualExams.length > 0) {
-      // Create exam types based on actual exams found
-      const examTypeMap: {[key: string]: { key: string; label: string; exams: any[] }} = {};
+      // Create a card for each individual exam
+      const examCards = actualExams.map((exam) => ({
+        key: exam.id,
+        label: exam.name || exam.examType || 'পরীক্ষা',
+        exams: [exam],
+        examId: exam.id
+      }));
 
-      actualExams.forEach((exam) => {
-        // Use the exam's examType as the key, or create one from the name
-        let examKey = exam.examType || exam.name || 'unknown';
+      console.log('📋 Created exam cards:', examCards.map(c => ({
+        key: c.key,
+        label: c.label
+      })));
 
-        // Normalize the key
-        if (examKey.includes('প্রথম সাময়িক')) examKey = 'monthly';
-        else if (examKey.includes('দ্বিতীয় সাময়িক')) examKey = 'quarterly';
-        else if (examKey.includes('তৃতীয় সাময়িক')) examKey = 'halfYearly';
-        else if (examKey.includes('বার্ষিক')) examKey = 'annual';
-        else if (examKey.includes('মাসিক')) examKey = 'monthly';
-        else examKey = 'monthly'; // default
-
-        if (!examTypeMap[examKey]) {
-          examTypeMap[examKey] = {
-            key: examKey,
-            label: exam.name || exam.examType || 'অন্যান্য পরীক্ষা',
-            exams: []
-          };
-        }
-        examTypeMap[examKey].exams.push(exam);
-      });
-
-      const mappedTypes = Object.values(examTypeMap);
-      console.log('📋 Mapped exam types:', mappedTypes.map(t => ({ key: t.key, label: t.label, count: t.exams.length })));
-
-      return mappedTypes;
+      return examCards;
     } else {
-      console.log('📋 Using fallback exam types');
-      return [
-        { key: 'monthly', label: 'মাসিক পরীক্ষা', exams: [] },
-        { key: 'quarterly', label: 'ত্রৈমাসিক পরীক্ষা', exams: [] },
-        { key: 'halfYearly', label: 'অর্ধবার্ষিক পরীক্ষা', exams: [] },
-        { key: 'annual', label: 'বার্ষিক পরীক্ষা', exams: [] }
-      ];
+      console.log('📋 No actual exams found, showing empty state');
+      return [];
     }
   }, [actualExams]);
-
-
 
   // Load actual exams from exam management page
   const loadActualExams = async () => {
@@ -134,19 +168,20 @@ function ExamFeeManagementPage() {
       const allExams = await examQueries.getAllExams();
       console.log('📋 Found', allExams.length, 'exams in database');
 
-      // Simple filtering - just check for our school ID
-      const schoolExams = allExams.filter((exam: any) => exam.schoolId === schoolId);
-      console.log('📋 Found', schoolExams.length, 'exams for school', schoolId);
+      // Filter for our school ID and exclude deleted exams
+      const schoolExams = allExams.filter((exam: any) => {
+        const isDeleted = exam.deleted === true || exam.deleted === 'true';
+        const isCorrectSchool = exam.schoolId === schoolId;
+        
+        console.log('📋 Checking exam:', exam.id, 'deleted:', exam.deleted, 'isDeleted:', isDeleted, 'school:', exam.schoolId);
+        
+        return isCorrectSchool && !isDeleted;
+      });
+      console.log('📋 Found', schoolExams.length, 'active exams for school', schoolId);
 
-      // If no exams for our school, try to get any exams (for debugging)
-      let finalExamsData = schoolExams;
-      if (schoolExams.length === 0) {
-        console.log('⚠️ No exams found for school, using any available exams for testing');
-        finalExamsData = allExams.slice(0, 5); // Take first 5 for testing
-      }
-
-      setActualExams(finalExamsData);
-      console.log('✅ Loaded', finalExamsData.length, 'exams for fee management');
+      // Always use only filtered exams (no fallback to show deleted exams)
+      setActualExams(schoolExams);
+      console.log('✅ Loaded', schoolExams.length, 'active exams for fee management');
 
     } catch (error) {
       console.error('❌ Error loading actual exams:', error);
@@ -210,7 +245,7 @@ function ExamFeeManagementPage() {
         const deletedCount = await classQueries.deleteAllClasses(schoolId);
         console.log(`🗑️ Deleted ${deletedCount} existing classes`);
 
-        // Create comprehensive sample classes for IQRA-202531 (1-12 classes)
+        // Create comprehensive sample classes for SCHOOL_ID (1-12 classes)
         const sampleClasses = [
           {
             className: 'প্লে',
@@ -434,51 +469,41 @@ function ExamFeeManagementPage() {
     return () => unsubscribe();
   }, [router]);
 
-  // Load exam fees from Firebase (only user-set fees, no sample data)
+  // Load exam fees from Firebase - now loads exam-specific fees by exam ID
   const loadExamFees = async () => {
     try {
-      const examFeesData = await accountingQueries.getExamFees(schoolId);
+      // Load exam-specific fees from /examSpecificFees/{schoolId}
+      const examFeesRef = doc(db, 'examSpecificFees', schoolId);
+      const examFeesSnap = await getDoc(examFeesRef);
 
-      // Only load existing fees, don't create sample data
-      console.log('Loaded existing exam fees from Firebase:', examFeesData);
-
-      // Filter out empty exam types (only keep types that have actual fees set)
-      const filteredFees: {[examType: string]: {[className: string]: number}} = {};
-
-      Object.entries(examFeesData).forEach(([examType, classFees]) => {
-        const feesWithValues = Object.fromEntries(
-          Object.entries(classFees).filter(([_, fee]) => {
-            // More robust check for positive fees
-            const feeValue = typeof fee === 'string' ? parseFloat(fee) : fee;
-            return feeValue && feeValue > 0;
-          })
-        );
-
-        // Only include exam types that have at least one fee set
-        if (Object.keys(feesWithValues).length > 0) {
-          filteredFees[examType] = feesWithValues;
-        }
-      });
-
-      setExamFees(filteredFees);
-      console.log('📊 Filtered exam fees (only user-set fees):', filteredFees);
+      if (examFeesSnap.exists()) {
+        const examSpecificData = examFeesSnap.data();
+        const examSpecificFees = examSpecificData.fees || {};
+        
+        console.log('✅ Loaded exam-specific fees:', examSpecificFees);
+        setExamFees(examSpecificFees);
+      } else {
+        console.log('📋 No exam-specific fees found');
+        setExamFees({});
+      }
     } catch (error) {
-      console.error('Error loading exam fees from Firebase:', error);
-      // Set empty fees if error
+      console.error('❌ Error loading exam fees:', error);
       setExamFees({});
     }
   };
 
   // Start editing fees for an exam type
-  const startEditingFees = (examType: string) => {
-    const currentFees = examFees[examType as keyof typeof examFees] || {};
+  const startEditingFees = (examType: string, examId: string) => {
+    const currentFees = getExamFeesForDisplay(examType);
     setTempFees({ ...currentFees });
     setEditingType(examType);
+    setEditingExamId(examId);
   };
 
   // Cancel editing
   const cancelEditing = () => {
     setEditingType(null);
+    setEditingExamId(null);
     setTempFees({});
   };
 
@@ -490,68 +515,297 @@ function ExamFeeManagementPage() {
     }));
   };
 
+  // Set up comprehensive fee structure for all classes
+  const setupComprehensiveFees = async () => {
+    try {
+      console.log('🚀 Setting up comprehensive fee structure for all classes...');
+
+      // Get current exam fees
+      const currentExamFees = await accountingQueries.getExamFees(schoolId);
+
+      // Define comprehensive fee structure for all classes
+      const comprehensiveFees = {
+        'First Term Examination Fee': {
+          'প্লে': 180,
+          'নার্সারি': 200,
+          'প্রথম': 250,
+          'দ্বিতীয়': 300,
+          'তৃতীয়': 350,
+          'চতুর্থ': 400,
+          'পঞ্চম': 450,
+          'ষষ্ঠ': 500,
+          'সপ্তম': 550,
+          'অষ্টম': 600,
+          'নবম': 650,
+          'দশম': 700,
+          'একাদশ': 750,
+          'দ্বাদশ': 800
+        },
+        'Second Term Examination Fee': {
+          'প্লে': 180,
+          'নার্সারি': 200,
+          'প্রথম': 250,
+          'দ্বিতীয়': 300,
+          'তৃতীয়': 350,
+          'চতুর্থ': 400,
+          'পঞ্চম': 450,
+          'ষষ্ঠ': 500,
+          'সপ্তম': 550,
+          'অষ্টম': 600,
+          'নবম': 650,
+          'দশম': 700,
+          'একাদশ': 750,
+          'দ্বাদশ': 800
+        },
+        'Annual Examination Fee': {
+          'প্লে': 300,
+          'নার্সারি': 350,
+          'প্রথম': 400,
+          'দ্বিতীয়': 450,
+          'তৃতীয়': 500,
+          'চতুর্থ': 550,
+          'পঞ্চম': 600,
+          'ষষ্ঠ': 650,
+          'সপ্তম': 700,
+          'অষ্টম': 750,
+          'নবম': 800,
+          'দশম': 850,
+          'একাদশ': 900,
+          'দ্বাদশ': 950
+        },
+        'Monthly Examination Fee': {
+          'প্লে': 100,
+          'নার্সারি': 120,
+          'প্রথম': 150,
+          'দ্বিতীয়': 180,
+          'তৃতীয়': 200,
+          'চতুর্থ': 220,
+          'পঞ্চম': 250,
+          'ষষ্ঠ': 280,
+          'সপ্তম': 300,
+          'অষ্টম': 320,
+          'নবম': 350,
+          'দশম': 380,
+          'একাদশ': 400,
+          'দ্বাদশ': 420
+        }
+      };
+
+      console.log('📋 Comprehensive fee structure to save:', comprehensiveFees);
+
+      // Save comprehensive fees to Firebase
+      await accountingQueries.saveExamFees(schoolId, comprehensiveFees, user?.email || 'admin');
+      console.log('✅ Comprehensive fees saved to Firebase successfully');
+
+      // Update local state immediately for instant UI feedback
+      setExamFees(comprehensiveFees);
+      console.log('✅ Local state updated immediately');
+
+      // Also reload from database to ensure consistency
+      await loadExamFees();
+      console.log('✅ Reloaded fees from database');
+
+      console.log('🎉 Comprehensive fee structure saved and UI updated successfully!');
+      setShowSuccessModal(true);
+
+      // Show the saved fees in console for verification
+      console.log('📋 Complete comprehensive fee structure saved:', comprehensiveFees);
+    } catch (error) {
+      console.error('❌ Error setting up comprehensive fees:', error);
+      showError('সম্পূর্ণ ফি স্ট্রাকচার সেটআপ করতে ত্রুটি হয়েছে।');
+    }
+  };
+
   // Save fees for an exam type
   const saveFees = async (examType: string) => {
     setSaving(true);
     try {
       console.log('💾 Saving fees for exam type:', examType);
+      console.log('📝 Editing exam ID:', editingExamId);
       console.log('📝 Temp fees to save:', tempFees);
-
-      // Get current exam fees
-      const currentExamFees = await accountingQueries.getExamFees(schoolId);
-      console.log('📋 Current exam fees before save:', currentExamFees);
 
       // Filter out zero values before saving
       const feesToSave = Object.fromEntries(
         Object.entries(tempFees).filter(([_, fee]) => fee && fee > 0)
       );
 
-      // Update the specific exam type with new fees (only non-zero values)
-      const updatedExamFees = {
-        ...currentExamFees,
-        [examType]: feesToSave
-      };
+      // Use the existing exam ID that we're editing
+      const examId = editingExamId || examType;
+      
+      // 1. Update exam record in /exams collection with fees
+      const examRef = doc(db, 'exams', examId);
+      const examSnap = await getDoc(examRef);
+      
+      if (examSnap.exists()) {
+        // Update existing exam with new fees
+        await setDoc(examRef, {
+          fees: feesToSave,
+          updatedAt: new Date().toISOString(),
+          updatedBy: user?.email || 'admin'
+        }, { merge: true });
+        console.log('✅ Exam fees updated in /exams:', examId);
+      } else {
+        console.error('❌ Exam not found:', examId);
+        showError('পরীক্ষা খুঁজে পাওয়া যায়নি।');
+        return;
+      }
 
-      console.log('📋 Updated exam fees to save:', updatedExamFees);
+      // 2. Save exam-specific fees to /examSpecificFees
+      const examFeesRef = doc(db, 'examSpecificFees', schoolId);
+      await setDoc(examFeesRef, {
+        fees: {
+          [examId]: feesToSave
+        },
+        lastUpdated: new Date().toISOString(),
+        updatedBy: user?.email || 'admin'
+      }, { merge: true });
+      console.log('✅ Exam fees saved to /examSpecificFees:', examId);
 
-      // Save updated fees to Firebase
-      await accountingQueries.saveExamFees(schoolId, updatedExamFees, user?.email || 'admin');
-      console.log('✅ Fees saved to Firebase successfully');
-
-      // Update local state immediately for instant UI feedback (with filtered fees)
-      const localFilteredFees = {
-        ...currentExamFees,
-        [examType]: feesToSave
-      };
-      setExamFees(localFilteredFees);
-      console.log('✅ Local state updated immediately with filtered fees');
-
-      // Also reload from database to ensure consistency
+      // Update local state
+      setExamFees(prev => ({
+        ...prev,
+        [examId]: feesToSave
+      }));
       await loadExamFees();
-      console.log('✅ Reloaded fees from database');
+      await loadActualExams();
 
       setEditingType(null);
+      setEditingExamId(null);
       setTempFees({});
 
-      console.log('🎉 Fees saved and UI updated successfully!');
-      setShowSuccessModal(true);
+      console.log('🎉 Exam fees updated successfully!');
+      showSuccess('পরীক্ষার ফি সফলভাবে আপডেট করা হয়েছে!');
     } catch (error) {
       console.error('❌ Error saving fees:', error);
-      alert('ফি সংরক্ষণ করতে ত্রুটি হয়েছে।');
+      showError('ফি সংরক্ষণ করতে ত্রুটি হয়েছে।');
     } finally {
       setSaving(false);
     }
   };
 
-  // Get exam fees for display
-  const getExamFeesForDisplay = (examType: string) => {
-    return examFees[examType as keyof typeof examFees] || {};
+  // Get exam fees for display - now works with exam IDs
+  const getExamFeesForDisplay = (examKey: string) => {
+    // First try to get fees from examFeesData (exam-specific fees by exam ID)
+    const examSpecificFeesRef = doc(db, 'examSpecificFees', schoolId);
+    
+    // For now, return from examFees state which should have exam ID as key
+    return examFees[examKey] || {};
   };
 
   // Calculate total fees for an exam type
   const calculateTotalFees = (examType: string) => {
     const fees = getExamFeesForDisplay(examType);
     return Object.values(fees).reduce((total: number, fee) => total + (fee || 0), 0);
+  };
+
+  // Delete exam
+  const deleteExam = async (examId: string, examName: string) => {
+    showConfirm(
+      `আপনি কি "${examName}" পরীক্ষাটি মুছে ফেলতে চান?`,
+      async () => {
+        setSaving(true);
+    try {
+      // 1. Delete exam record
+      const examRef = doc(db, 'exams', examId);
+      await setDoc(examRef, { deleted: true, deletedAt: new Date().toISOString() }, { merge: true });
+      console.log('✅ Exam marked as deleted:', examId);
+
+      // 2. Remove fees
+      const examFeesRef = doc(db, 'examSpecificFees', schoolId);
+      const examFeesSnap = await getDoc(examFeesRef);
+      
+      if (examFeesSnap.exists()) {
+        const currentFees = examFeesSnap.data().fees || {};
+        delete currentFees[examId];
+        
+        await setDoc(examFeesRef, {
+          fees: currentFees,
+          lastUpdated: new Date().toISOString()
+        });
+        console.log('✅ Exam fees removed:', examId);
+      }
+
+      // 3. Reload data
+      await loadActualExams();
+      await loadExamFees();
+
+      showSuccess('পরীক্ষা সফলভাবে মুছে ফেলা হয়েছে!');
+    } catch (error) {
+      console.error('❌ Error deleting exam:', error);
+      showError('পরীক্ষা মুছে ফেলতে ত্রুটি হয়েছে।');
+    } finally {
+      setSaving(false);
+    }
+      }
+    );
+  };
+
+  // Create new exam with fees
+  const createNewExam = async () => {
+    if (!newExamName.trim() || !newExamType.trim()) {
+      showWarning('অনুগ্রহ করে পরীক্ষার নাম এবং ধরন প্রদান করুন।');
+      return;
+    }
+
+    // Check if fees are set
+    const hasAnyFee = Object.values(newExamFees).some(fee => fee > 0);
+    if (!hasAnyFee) {
+      showWarning('অনুগ্রহ করে অন্তত একটি ক্লাসের জন্য ফি নির্ধারণ করুন।');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Create exam ID
+      const examId = `${schoolId}-${newExamType}-${Date.now()}`;
+      
+      // 1. Create exam record WITH fees in unified structure
+      const examData = {
+        id: examId,
+        name: newExamName,
+        examType: newExamType,
+        schoolId: schoolId,
+        academicYear: '2025',
+        status: 'upcoming',
+        fees: newExamFees, // ← Fees stored directly in exam document
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: user?.email || 'admin'
+      };
+
+      const examRef = doc(db, 'exams', examId);
+      await setDoc(examRef, examData);
+      console.log('✅ New exam created with fees:', examId, newExamFees);
+
+      // 2. Also save to examSpecificFees for backward compatibility
+      const examFeesRef = doc(db, 'examSpecificFees', schoolId);
+      await setDoc(examFeesRef, {
+        fees: {
+          [examId]: newExamFees
+        },
+        lastUpdated: new Date().toISOString(),
+        updatedBy: user?.email || 'admin'
+      }, { merge: true });
+      console.log('✅ Exam fees also saved to examSpecificFees for backward compatibility');
+
+      // 3. Reload data
+      await loadActualExams();
+      await loadExamFees();
+
+      // 4. Reset form and close modal
+      setNewExamName('');
+      setNewExamType('');
+      setNewExamFees({});
+      setShowAddExamModal(false);
+      setShowSuccessModal(true);
+
+      console.log('🎉 New exam created successfully!');
+    } catch (error) {
+      console.error('❌ Error creating exam:', error);
+      showError('পরীক্ষা তৈরি করতে ত্রুটি হয়েছে।');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -578,9 +832,28 @@ function ExamFeeManagementPage() {
             <span>পরীক্ষায় ফিরে যান</span>
           </button>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">পরীক্ষার ফি ম্যানেজমেন্ট</h1>
-          <p className="text-gray-600 mt-1">পরীক্ষার ফি নির্ধারণ করুন এবং ক্লাস অনুযায়ী ফি ম্যানেজ করুন</p>
+        <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">পরীক্ষার ফি ম্যানেজমেন্ট</h1>
+            <p className="text-gray-600 mt-1">পরীক্ষার ফি নির্ধারণ করুন এবং ক্লাস অনুযায়ী ফি ম্যানেজ করুন</p>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setShowAddExamModal(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>নতুন পরীক্ষা যোগ করুন</span>
+            </button>
+            <button
+              onClick={setupComprehensiveFees}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2"
+            >
+              <Calculator className="w-4 h-4" />
+              <span>সম্পূর্ণ ফি স্ট্রাকচার সেটআপ করুন</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -650,13 +923,27 @@ function ExamFeeManagementPage() {
                           </button>
                         </div>
                       ) : (
-                        <button
-                          onClick={() => startEditingFees(examType.key)}
-                          className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-1"
-                        >
-                          <Edit className="w-4 h-4" />
-                          <span>ফি সম্পাদনা</span>
-                        </button>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => startEditingFees(examType.key, examType.examId)}
+                            className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-1"
+                          >
+                            <Edit className="w-4 h-4" />
+                            <span>ফি সম্পাদনা</span>
+                          </button>
+                          {examType.exams && examType.exams.length > 0 && (
+                            <button
+                              onClick={() => {
+                                const exam = examType.exams[0];
+                                deleteExam(exam.id, exam.name);
+                              }}
+                              className="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 flex items-center space-x-1"
+                              title="পরীক্ষা মুছে ফেলুন"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -733,12 +1020,120 @@ function ExamFeeManagementPage() {
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-blue-900 mb-3">কীভাবে কাজ করে:</h3>
         <div className="space-y-2 text-blue-800">
-          <p>• প্রত্যেক পরীক্ষার ধরনের (প্রথম সাময়িক, দ্বিতীয় সাময়িক, মাসিক, বার্ষিক) জন্য আলাদাভাবে ফি নির্ধারণ করুন</p>
+          <p>• প্রত্যেক পরীক্ষার ধরনের (প্রথম সাময়িক, দ্বিতীয় সাময়িক, মাসিক, বার্ষিক) জন্য আলাদাভাবে ফি নির্ধারণ করুন</p>
           <p>• প্রত্যেক ক্লাসের জন্য আলাদা ফি নির্ধারণ করতে পারবেন</p>
           <p>• ফি সংগ্রহের সময় এই নির্ধারিত ফি স্বয়ংক্রিয়ভাবে প্রযোজ্য হবে</p>
           <p>• শিক্ষার্থীদের ফি সংগ্রহ পেজে এই ফি দেখতে এবং সংগ্রহ করতে পারবেন</p>
         </div>
       </div>
+
+      {/* Add Exam Modal */}
+      <Modal
+        isOpen={showAddExamModal}
+        onClose={() => {
+          setShowAddExamModal(false);
+          setNewExamName('');
+          setNewExamType('');
+          setNewExamFees({});
+        }}
+        size="lg"
+        title="নতুন পরীক্ষা যোগ করুন"
+        closeOnOverlayClick={false}
+      >
+        <div className="space-y-6">
+          {/* Exam Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              পরীক্ষার নাম *
+            </label>
+            <input
+              type="text"
+              value={newExamName}
+              onChange={(e) => setNewExamName(e.target.value)}
+              placeholder="যেমন: প্রথম সাময়িক পরীক্ষা ২০২৫"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Exam Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              পরীক্ষার ধরন *
+            </label>
+            <input
+              type="text"
+              value={newExamType}
+              onChange={(e) => setNewExamType(e.target.value)}
+              placeholder="যেমন: firstTerm, secondTerm, monthly"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              ইংরেজিতে লিখুন (firstTerm, secondTerm, thirdTerm, annual, monthly, quarterly, halfYearly)
+            </p>
+          </div>
+
+          {/* Fees for Each Class */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              প্রতিটি ক্লাসের জন্য ফি নির্ধারণ করুন *
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+              {availableClasses.map((className) => (
+                <div key={className} className="space-y-1">
+                  <label className="text-sm text-gray-600">{className}</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-gray-500">৳</span>
+                    <input
+                      type="number"
+                      value={newExamFees[className] || ''}
+                      onChange={(e) => setNewExamFees({
+                        ...newExamFees,
+                        [className]: parseFloat(e.target.value) || 0
+                      })}
+                      className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center justify-end space-x-3 pt-4 border-t">
+            <button
+              onClick={() => {
+                setShowAddExamModal(false);
+                setNewExamName('');
+                setNewExamType('');
+                setNewExamFees({});
+              }}
+              disabled={saving}
+              className="px-6 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors disabled:opacity-50"
+            >
+              বাতিল করুন
+            </button>
+            <button
+              onClick={createNewExam}
+              disabled={saving || !newExamName.trim() || !newExamType.trim()}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>সংরক্ষণ হচ্ছে...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>পরীক্ষা তৈরি করুন</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Success Modal */}
       <Modal
@@ -754,8 +1149,8 @@ function ExamFeeManagementPage() {
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">ফি সফলভাবে সংরক্ষণ করা হয়েছে!</h3>
-            <p className="text-gray-600">আপনার পরীক্ষার ফি সেটিংস সফলভাবে আপডেট করা হয়েছে।</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">সফলভাবে সংরক্ষণ করা হয়েছে!</h3>
+            <p className="text-gray-600">পরীক্ষা এবং ফি সফলভাবে তৈরি করা হয়েছে।</p>
           </div>
           <button
             onClick={() => setShowSuccessModal(false)}

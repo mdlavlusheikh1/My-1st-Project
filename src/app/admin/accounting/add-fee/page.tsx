@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase';
 import { User as AuthUser, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { classQueries, accountingQueries, feeQueries } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home,
   Users,
@@ -84,7 +85,7 @@ function AddFeePage() {
     lateFee: 0,
     isActive: true,
     createdAt: new Date().toISOString(),
-    schoolId: 'iqra-school-2025'
+    schoolId: SCHOOL_ID
   });
 
   const [examFeeBreakdown, setExamFeeBreakdown] = useState({
@@ -192,7 +193,7 @@ function AddFeePage() {
         throw new Error('অন্তত একটি ক্লাস নির্বাচন করুন');
       }
 
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const currentUser = user?.uid || 'system';
 
       // Save fee to Firebase
@@ -236,7 +237,7 @@ function AddFeePage() {
           lateFee: 0,
           isActive: true,
           createdAt: new Date().toISOString(),
-          schoolId: 'iqra-school-2025'
+          schoolId: SCHOOL_ID
         });
         // Redirect to fees management page to show the created fee
         router.push('/admin/accounting/fees');

@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase';
 import { User as AuthUser, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { studentQueries, teacherQueries, accountingQueries } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home,
   Users,
@@ -82,7 +83,7 @@ function FeeCollectionPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const schoolId = 'iqra-school-2025';
+        const schoolId = SCHOOL_ID;
         const currentDate = new Date();
         const startOfMonth = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-01`;
         const today = currentDate.toISOString().split('T')[0];

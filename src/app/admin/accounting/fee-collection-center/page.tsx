@@ -7,6 +7,7 @@ import { User as AuthUser, onAuthStateChanged } from 'firebase/auth';
 import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { studentQueries, accountingQueries } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home,
   Users,
@@ -171,7 +172,7 @@ function FeeCollectionCenter() {
 
   const loadTuitionSummary = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Get all students
       const studentsData = await studentQueries.getAllStudents();
@@ -272,7 +273,7 @@ function FeeCollectionCenter() {
 
   const loadExamSummary = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Get all students
       const studentsData = await studentQueries.getAllStudents();
@@ -361,7 +362,7 @@ function FeeCollectionCenter() {
 
   const loadAdmissionSummary = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Get all students
       const studentsData = await studentQueries.getAllStudents();
@@ -450,7 +451,7 @@ function FeeCollectionCenter() {
 
   const loadClassWiseSummaries = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
 
       // Get all students to group by class
       const studentsData = await studentQueries.getAllStudents();
@@ -660,7 +661,7 @@ function FeeCollectionCenter() {
   // Load exam students data
   const loadExamStudents = async () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const studentsData = await studentQueries.getAllStudents();
       const allTransactions = await accountingQueries.getAllTransactions(schoolId);
 

@@ -55,16 +55,14 @@ const Modal: React.FC<ModalProps> = ({
 
   return (
     <Fragment>
-      {/* Backdrop */}
+      {/* Backdrop with Blur Effect */}
       <div
-        className="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-fadeIn"
         onClick={handleOverlayClick}
       >
-        {/* Background Blur Layer */}
-        <div className="absolute inset-0 backdrop-blur-md bg-white bg-opacity-30"></div>
         {/* Modal Container */}
         <div
-          className={`bg-white rounded-xl shadow-2xl transform transition-all w-full border-2 border-gray-200 ${sizeClasses[size]} max-h-[90vh] overflow-hidden relative ${className}`}
+          className={`bg-white rounded-2xl shadow-2xl transform transition-all w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden relative animate-scaleIn ${className}`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { classQueries, settingsQueries } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home,
   Users,
@@ -160,7 +161,7 @@ function AddClassPage() {
 
     setIsSaving(true);
     try {
-      const schoolId = 'IQRA-202531'; // Use consistent school ID
+      const schoolId = SCHOOL_ID; // Use consistent school ID
       const schoolName = 'ইকরা নুরানী একাডেমী'; // Match the display name
 
       const classData = {

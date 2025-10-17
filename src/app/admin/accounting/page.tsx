@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase';
 import { User as AuthUser, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { accountingQueries, FinancialTransaction, FinancialCategory } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home,
   Users,
@@ -91,7 +92,7 @@ function AccountingPage() {
         setDataLoading(true);
         setError(null);
 
-        const schoolId = 'iqra-school-2025'; // Should come from user context
+        const schoolId = SCHOOL_ID; // Should come from user context
 
         // Get financial summary
         const summary = await accountingQueries.getFinancialSummary(schoolId);
@@ -122,7 +123,7 @@ function AccountingPage() {
   const handleCreateSampleData = async () => {
     try {
       setDataLoading(true);
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       await accountingQueries.createSampleFinancialData(schoolId);
 
       // Refresh data after creating sample data

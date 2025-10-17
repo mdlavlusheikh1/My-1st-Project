@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Download, Upload, Database, Shield, AlertTriangle, Clock, FileText, ArrowLeft, Trash2
 } from 'lucide-react';
@@ -48,7 +49,7 @@ function SaveMarksPage() {
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
   const router = useRouter();
-  const schoolId = 'iqra-school-2025';
+  const schoolId = SCHOOL_ID;
 
   // Sample data for demo
   const sampleEntries = [

@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { inventoryQueries, classQueries, InventoryItem } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home, Users, BookOpen, ClipboardList, Calendar, Settings, LogOut, Menu, X,
   UserCheck, GraduationCap, Building, CreditCard, TrendingUp, Search, Bell,
@@ -64,7 +65,7 @@ function EditInventoryPage() {
   // Setup real-time listener for classes
   const setupClassesListener = () => {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const unsubscribe = classQueries.subscribeToClassesBySchool(
         schoolId,
         (classesData) => {

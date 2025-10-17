@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '@/components/AdminLayout';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   TrendingUp as TrendingUpIcon, AlertCircle, CheckCircle2, XCircle as XCircleIcon,
   ArrowLeft, BarChart3, User as UserIcon
@@ -39,7 +40,7 @@ function PromotionPage() {
     requireAllSubjectsPass: false
   });
   const router = useRouter();
-  const schoolId = 'iqra-school-2025';
+  const schoolId = SCHOOL_ID;
 
   // Sample data for demo
   const sampleStudents: Student[] = [

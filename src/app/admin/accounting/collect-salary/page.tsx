@@ -7,6 +7,7 @@ import { User as AuthUser, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { studentQueries, accountingQueries, feeQueries } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home,
   Users,
@@ -122,7 +123,7 @@ function CollectSalaryPage() {
         setStudents(studentsData);
 
         // Fetch existing transactions to get payment status
-        const schoolId = 'iqra-school-2025';
+        const schoolId = SCHOOL_ID;
         const existingTransactions = await accountingQueries.getAllTransactions(schoolId);
         console.log('✅ Transactions fetched:', existingTransactions.length);
 
@@ -258,7 +259,7 @@ function CollectSalaryPage() {
   useEffect(() => {
     if (!user) return;
 
-    const schoolId = 'iqra-school-2025';
+    const schoolId = SCHOOL_ID;
     const unsubscribe = accountingQueries.subscribeToTransactions(
       schoolId,
       (transactions) => {
@@ -352,7 +353,7 @@ function CollectSalaryPage() {
   useEffect(() => {
     if (!user) return;
 
-    const schoolId = 'iqra-school-2025';
+    const schoolId = SCHOOL_ID;
 
     const unsubscribe = accountingQueries.subscribeToTransactions(
       schoolId,
@@ -451,7 +452,7 @@ function CollectSalaryPage() {
     const nextVoucherNumber = `${currentYear}-${Date.now().toString().slice(-3)}`;
 
     // Get class fee structure from fee management system
-    const schoolId = 'iqra-school-2025';
+    const schoolId = SCHOOL_ID;
 
     console.log('🔍=== FEE MANAGEMENT CONNECTION DEBUG ===');
     console.log('Student name:', student.studentName);
@@ -553,7 +554,7 @@ function CollectSalaryPage() {
         description: `${formData.month} মাসের টিউশন ফি - ${selectedStudent.studentName}`,
         date: formData.date,
         status: 'completed' as const,
-        schoolId: 'iqra-school-2025',
+        schoolId: SCHOOL_ID,
         recordedBy: user?.email || 'admin',
         paymentMethod: formData.paymentMethod as 'cash' | 'bank_transfer' | 'check' | 'online' | 'other',
         studentId: selectedStudent.studentId,
@@ -636,7 +637,7 @@ function CollectSalaryPage() {
       setStudents(studentsData);
 
       // Fetch existing transactions to get payment status
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const existingTransactions = await accountingQueries.getAllTransactions(schoolId);
 
       // Initialize payment data for each student

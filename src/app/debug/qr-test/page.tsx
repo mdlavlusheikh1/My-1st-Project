@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { QRUtils } from '@/lib/qr-utils';
 import QRScanner from '@/components/QRScanner';
+import { SCHOOL_ID } from '@/lib/constants';
 
 function QRTestPage() {
   const [testQRCode, setTestQRCode] = useState<string>('');
@@ -20,7 +21,7 @@ function QRTestPage() {
       // Generate a test student QR code
       const { qrCode, qrData } = await QRUtils.generateStudentQR(
         'test-student-123',
-        'IQRA-202531',
+        SCHOOL_ID,
         '001'
       );
 

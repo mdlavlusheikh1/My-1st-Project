@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import AdminLayout from '@/components/AdminLayout';
 import { examQueries } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Plus, Edit, Trash2, Eye, Clock, FileText, Award, BarChart3, Save,
   CheckCircle, XCircle, BookOpen as BookOpenIcon,
@@ -51,7 +52,7 @@ function ExamsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const router = useRouter();
-  const schoolId = 'IQRA-202531';
+  const schoolId = SCHOOL_ID;
 
   // State for add exam modal
   const [newExam, setNewExam] = useState({
@@ -216,23 +217,6 @@ function ExamsPage() {
 
       {/* Quick Actions Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Exam Management */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-6 h-6 text-blue-600" />
-            </div>
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">প্রধান</span>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">পরীক্ষা পরিচালনা</h3>
-          <p className="text-gray-600 text-sm mb-4">নতুন পরীক্ষা তৈরি করুন, সময়সূচী নির্ধারণ করুন এবং পরীক্ষা পরিচালনা করুন।</p>
-          <button
-            onClick={() => router.push('/admin/exams/manage')}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 text-sm font-medium"
-          >
-            পরীক্ষা পরিচালনা করুন
-          </button>
-        </div>
 
         {/* Exam Results */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">

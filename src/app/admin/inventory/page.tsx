@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { inventoryQueries, InventoryItem, InventoryAlert, StockMovement, accountingQueries } from '@/lib/database-queries';
+import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home, Users, BookOpen, ClipboardList, Calendar, Settings, LogOut, Menu, X,
   UserCheck, GraduationCap, Building, CreditCard, TrendingUp, Search, Bell,
@@ -66,7 +67,7 @@ function InventoryPage() {
   const loadInventoryData = async () => {
     try {
       setDataLoading(true);
-      const schoolId = 'iqra-school-2025'; // This should come from user context
+      const schoolId = SCHOOL_ID; // This should come from user context
 
       // Load inventory statistics
       const stats = await inventoryQueries.getInventoryStats(schoolId);
@@ -161,7 +162,7 @@ function InventoryPage() {
   useEffect(() => {
     if (!user) return;
 
-    const schoolId = 'iqra-school-2025';
+    const schoolId = SCHOOL_ID;
 
     // Listen to inventory items changes
     const unsubscribeItems = inventoryQueries.subscribeToInventoryItems(schoolId, (items) => {
@@ -189,7 +190,7 @@ function InventoryPage() {
   const createSampleData = async () => {
     try {
       setDataLoading(true);
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       await inventoryQueries.createSampleInventoryData(schoolId);
       await loadInventoryData(); // Reload data after creating samples
     } catch (error) {

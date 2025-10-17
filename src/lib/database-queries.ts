@@ -17,6 +17,7 @@ import {
   Unsubscribe
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { SCHOOL_ID } from './constants';
 
 // Types
 export interface User {
@@ -510,141 +511,6 @@ export const accountingQueries = {
     return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Budget : null;
   },
 
-  // Sample data creation for testing
-  async createSampleFinancialData(schoolId: string): Promise<void> {
-    try {
-      // Create sample categories
-      const incomeCategories = [
-        { name: 'মাসিক ফি', type: 'income' as const, description: 'শিক্ষার্থীদের মাসিক টিউশন ফি' },
-        { name: 'ভর্তি ফি', type: 'income' as const, description: 'নতুন শিক্ষার্থীদের ভর্তি ফি' },
-        { name: 'বই বিক্রয়', type: 'income' as const, description: 'পাঠ্যবই বিক্রয়' },
-        { name: 'অনুদান', type: 'income' as const, description: 'বিভিন্ন সূত্র থেকে অনুদান' }
-      ];
-
-      const expenseCategories = [
-        { name: 'শিক্ষক বেতন', type: 'expense' as const, description: 'শিক্ষকদের মাসিক বেতন' },
-        { name: 'বিদ্যুৎ বিল', type: 'expense' as const, description: 'বিদ্যুৎ ও পানির বিল' },
-        { name: 'রক্ষণাবেক্ষণ', type: 'expense' as const, description: 'স্কুলের রক্ষণাবেক্ষণ খরচ' },
-        { name: 'সরঞ্জাম', type: 'expense' as const, description: 'শিক্ষা সরঞ্জাম ক্রয়' },
-        { name: 'অন্যান্য', type: 'expense' as const, description: 'অন্যান্য খরচ' }
-      ];
-
-      // Create categories
-      for (const category of [...incomeCategories, ...expenseCategories]) {
-        await this.createCategory({
-          ...category,
-          isActive: true,
-          schoolId,
-          createdBy: 'system'
-        });
-      }
-
-      // Create sample transactions for the last 3 months
-      const currentDate = new Date();
-      const sampleTransactions = [
-        // Income transactions
-        {
-          type: 'income' as const,
-          category: 'মাসিক ফি',
-          amount: 150000,
-          description: 'জানুয়ারি মাসের টিউশন ফি',
-          date: '2024-01-15',
-          status: 'completed' as const,
-          schoolId,
-          recordedBy: 'admin',
-          paymentMethod: 'bank_transfer' as const
-        },
-        {
-          type: 'income' as const,
-          category: 'ভর্তি ফি',
-          amount: 50000,
-          description: 'নতুন শিক্ষার্থী ভর্তি ফি',
-          date: '2024-01-20',
-          status: 'completed' as const,
-          schoolId,
-          recordedBy: 'admin',
-          paymentMethod: 'cash' as const
-        },
-        {
-          type: 'income' as const,
-          category: 'মাসিক ফি',
-          amount: 145000,
-          description: 'ফেব্রুয়ারি মাসের টিউশন ফি',
-          date: '2024-02-15',
-          status: 'completed' as const,
-          schoolId,
-          recordedBy: 'admin',
-          paymentMethod: 'bank_transfer' as const
-        },
-        {
-          type: 'income' as const,
-          category: 'বই বিক্রয়',
-          amount: 25000,
-          description: 'পাঠ্যবই বিক্রয়',
-          date: '2024-02-25',
-          status: 'completed' as const,
-          schoolId,
-          recordedBy: 'admin',
-          paymentMethod: 'cash' as const
-        },
-
-        // Expense transactions
-        {
-          type: 'expense' as const,
-          category: 'শিক্ষক বেতন',
-          amount: 120000,
-          description: 'জানুয়ারি মাসের শিক্ষক বেতন',
-          date: '2024-01-30',
-          status: 'completed' as const,
-          schoolId,
-          recordedBy: 'admin',
-          paymentMethod: 'bank_transfer' as const
-        },
-        {
-          type: 'expense' as const,
-          category: 'বিদ্যুৎ বিল',
-          amount: 15000,
-          description: 'জানুয়ারি মাসের বিদ্যুৎ বিল',
-          date: '2024-01-25',
-          status: 'completed' as const,
-          schoolId,
-          recordedBy: 'admin',
-          paymentMethod: 'bank_transfer' as const
-        },
-        {
-          type: 'expense' as const,
-          category: 'শিক্ষক বেতন',
-          amount: 125000,
-          description: 'ফেব্রুয়ারি মাসের শিক্ষক বেতন',
-          date: '2024-02-28',
-          status: 'completed' as const,
-          schoolId,
-          recordedBy: 'admin',
-          paymentMethod: 'bank_transfer' as const
-        },
-        {
-          type: 'expense' as const,
-          category: 'রক্ষণাবেক্ষণ',
-          amount: 8000,
-          description: 'ক্লাসরুম রক্ষণাবেক্ষণ',
-          date: '2024-02-20',
-          status: 'completed' as const,
-          schoolId,
-          recordedBy: 'admin',
-          paymentMethod: 'cash' as const
-        }
-      ];
-
-      // Create transactions
-      for (const transaction of sampleTransactions) {
-        await this.createTransaction(transaction);
-      }
-
-      console.log('Sample financial data created successfully');
-    } catch (error) {
-      console.error('Error creating sample financial data:', error);
-    }
-  },
 
   // Real-time listeners for transactions
   subscribeToTransactions(
@@ -811,7 +677,7 @@ export const accountingQueries = {
   // Get next voucher number for session year
   async getNextVoucherNumber(sessionYear: string): Promise<string> {
     try {
-      const schoolId = 'iqra-school-2025';
+      const schoolId = SCHOOL_ID;
       const currentYear = new Date().getFullYear().toString();
 
       // Get all transactions for current session year
@@ -1068,59 +934,13 @@ export const accountingQueries = {
     return [...new Set(variations)]; // Remove duplicates
   },
 
-  // Create sample fees for testing - UPDATED FOR USER'S CLASSES
-  async createSampleFees(): Promise<void> {
-    try {
-      const schoolId = 'iqra-school-2025';
-
-      // Create fees specifically for the user's classes
-      const userFees = [
-        {
-          feeName: 'টিউশন ফি - প্লে',
-          feeNameEn: 'Tuition Fee - Play',
-          amount: 600, // প্লে class fee
-          description: 'প্লে ক্লাসের মাসিক টিউশন ফি',
-          applicableClasses: ['প্লে'],
-          feeType: 'monthly' as const,
-          isActive: true,
-          schoolId,
-          createdBy: 'system'
-        },
-        {
-          feeName: 'টিউশন ফি - নার্সারি',
-          feeNameEn: 'Tuition Fee - Nursery',
-          amount: 800, // নার্সারি class fee
-          description: 'নার্সারি ক্লাসের মাসিক টিউশন ফি',
-          applicableClasses: ['নার্সারি'],
-          feeType: 'monthly' as const,
-          isActive: true,
-          schoolId,
-          createdBy: 'system'
-        }
-      ];
-
-      // Delete existing fees first to avoid duplicates
-      await feeQueries.deleteAllFees(schoolId);
-      console.log('🗑️ Deleted existing fees');
-
-      // Create new fees
-      for (const feeData of userFees) {
-        await feeQueries.createFee(feeData);
-        console.log(`✅ Created fee: ${feeData.feeName} - ৳${feeData.amount} for classes: ${feeData.applicableClasses.join(', ')}`);
-      }
-
-      console.log('✅ User-specific fees created successfully');
-    } catch (error) {
-      console.error('❌ Error creating user fees:', error);
-    }
-  },
 
   // Exam Fee Management Functions
   async getExamFees(schoolId: string): Promise<{
-    monthly: Record<string, number>;
-    quarterly: Record<string, number>;
-    halfYearly: Record<string, number>;
-    annual: Record<string, number>;
+    'First Term Examination Fee': Record<string, number>;
+    'Second Term Examination Fee': Record<string, number>;
+    'Annual Examination Fee': Record<string, number>;
+    'Monthly Examination Fee': Record<string, number>;
   }> {
     try {
       const examFeesRef = doc(db, 'examFees', schoolId);
@@ -1129,35 +949,35 @@ export const accountingQueries = {
       if (examFeesSnap.exists()) {
         const data = examFeesSnap.data();
         return {
-          monthly: data.monthly || {},
-          quarterly: data.quarterly || {},
-          halfYearly: data.halfYearly || {},
-          annual: data.annual || {}
+          'First Term Examination Fee': data['First Term Examination Fee'] || {},
+          'Second Term Examination Fee': data['Second Term Examination Fee'] || {},
+          'Annual Examination Fee': data['Annual Examination Fee'] || {},
+          'Monthly Examination Fee': data['Monthly Examination Fee'] || {}
         };
       }
 
       return {
-        monthly: {},
-        quarterly: {},
-        halfYearly: {},
-        annual: {}
+        'First Term Examination Fee': {},
+        'Second Term Examination Fee': {},
+        'Annual Examination Fee': {},
+        'Monthly Examination Fee': {}
       };
     } catch (error) {
       console.error('Error getting exam fees:', error);
       return {
-        monthly: {},
-        quarterly: {},
-        halfYearly: {},
-        annual: {}
+        'First Term Examination Fee': {},
+        'Second Term Examination Fee': {},
+        'Annual Examination Fee': {},
+        'Monthly Examination Fee': {}
       };
     }
   },
 
   async saveExamFees(schoolId: string, examFees: {
-    monthly: Record<string, number>;
-    quarterly: Record<string, number>;
-    halfYearly: Record<string, number>;
-    annual: Record<string, number>;
+    'First Term Examination Fee': Record<string, number>;
+    'Second Term Examination Fee': Record<string, number>;
+    'Annual Examination Fee': Record<string, number>;
+    'Monthly Examination Fee': Record<string, number>;
   }, updatedBy: string): Promise<void> {
     try {
       const examFeesRef = doc(db, 'examFees', schoolId);
@@ -1183,15 +1003,37 @@ export const accountingQueries = {
     try {
       const examFeesRef = doc(db, 'examFees', schoolId);
 
-      // Get current exam fees
+      // Get current exam fees using the new field structure
       const currentFees = await this.getExamFees(schoolId);
 
-      // Update the specific exam type and class
-      currentFees[examType][className] = amount;
+      // Map old exam type to new field name
+      let fieldName = '';
+      switch (examType) {
+        case 'annual':
+          fieldName = 'Annual Examination Fee';
+          break;
+        case 'monthly':
+          fieldName = 'Monthly Examination Fee';
+          break;
+        case 'quarterly':
+          fieldName = 'Quarterly Examination Fee';
+          break;
+        case 'halfYearly':
+          fieldName = 'Half Yearly Examination Fee';
+          break;
+        default:
+          fieldName = examType;
+      }
+
+      // Update the specific exam type and class using the new field name
+      if (!currentFees[fieldName as keyof typeof currentFees]) {
+        (currentFees as any)[fieldName] = {};
+      }
+      (currentFees as any)[fieldName][className] = amount;
 
       // Save updated fees
       await this.saveExamFees(schoolId, currentFees, updatedBy);
-      console.log(`✅ Updated ${examType} exam fee for ${className}: ৳${amount}`);
+      console.log(`✅ Updated ${examType} exam fee for ${className}: ৳${amount} in field: ${fieldName}`);
     } catch (error) {
       console.error('❌ Error updating exam fee:', error);
       throw error;
@@ -1207,17 +1049,36 @@ export const accountingQueries = {
     try {
       const examFeesRef = doc(db, 'examFees', schoolId);
 
-      // Get current exam fees
+      // Get current exam fees using the new field structure
       const currentFees = await this.getExamFees(schoolId);
 
-      // Delete the specific exam fee
-      if (currentFees[examType][className]) {
-        delete currentFees[examType][className];
+      // Map old exam type to new field name
+      let fieldName = '';
+      switch (examType) {
+        case 'annual':
+          fieldName = 'Annual Examination Fee';
+          break;
+        case 'monthly':
+          fieldName = 'Monthly Examination Fee';
+          break;
+        case 'quarterly':
+          fieldName = 'Quarterly Examination Fee';
+          break;
+        case 'halfYearly':
+          fieldName = 'Half Yearly Examination Fee';
+          break;
+        default:
+          fieldName = examType;
+      }
+
+      // Delete the specific exam fee using the new field name
+      if ((currentFees as any)[fieldName]?.[className]) {
+        delete (currentFees as any)[fieldName][className];
       }
 
       // Save updated fees
       await this.saveExamFees(schoolId, currentFees, updatedBy);
-      console.log(`✅ Deleted ${examType} exam fee for ${className}`);
+      console.log(`✅ Deleted ${examType} exam fee for ${className} from field: ${fieldName}`);
     } catch (error) {
       console.error('❌ Error deleting exam fee:', error);
       throw error;
@@ -1231,7 +1092,27 @@ export const accountingQueries = {
   ): Promise<number | null> {
     try {
       const examFees = await this.getExamFees(schoolId);
-      return examFees[examType][className] || null;
+
+      // Map old exam type to new field name
+      let fieldName = '';
+      switch (examType) {
+        case 'annual':
+          fieldName = 'Annual Examination Fee';
+          break;
+        case 'monthly':
+          fieldName = 'Monthly Examination Fee';
+          break;
+        case 'quarterly':
+          fieldName = 'Quarterly Examination Fee';
+          break;
+        case 'halfYearly':
+          fieldName = 'Half Yearly Examination Fee';
+          break;
+        default:
+          fieldName = examType;
+      }
+
+      return (examFees as any)[fieldName]?.[className] || null;
     } catch (error) {
       console.error('Error getting exam fee by class and type:', error);
       return null;
@@ -1251,9 +1132,32 @@ export const accountingQueries = {
     try {
       const currentFees = await this.getExamFees(schoolId);
 
-      // Apply all updates
+      // Apply all updates with proper field mapping
       updates.forEach(update => {
-        currentFees[update.examType][update.className] = update.amount;
+        // Map old exam type to new field name
+        let fieldName = '';
+        switch (update.examType) {
+          case 'annual':
+            fieldName = 'Annual Examination Fee';
+            break;
+          case 'monthly':
+            fieldName = 'Monthly Examination Fee';
+            break;
+          case 'quarterly':
+            fieldName = 'Quarterly Examination Fee';
+            break;
+          case 'halfYearly':
+            fieldName = 'Half Yearly Examination Fee';
+            break;
+          default:
+            fieldName = update.examType;
+        }
+
+        // Update using the new field name
+        if (!(currentFees as any)[fieldName]) {
+          (currentFees as any)[fieldName] = {};
+        }
+        (currentFees as any)[fieldName][update.className] = update.amount;
       });
 
       // Save updated fees
@@ -1265,76 +1169,6 @@ export const accountingQueries = {
     }
   },
 
-  // Create sample exam fees for testing
-  async createSampleExamFees(schoolId?: string): Promise<void> {
-    try {
-      const defaultSchoolId = schoolId || 'IQRA-202531';
-
-      const sampleExamFees = {
-        monthly: {
-          'প্লে': 200,
-          'নার্সারি': 250,
-          'প্রথম': 300,
-          'দ্বিতীয়': 350,
-          'তৃতীয়': 400,
-          'চতুর্থ': 450,
-          'পঞ্চম': 500,
-          'ষষ্ঠ': 550,
-          'সপ্তম': 600,
-          'অষ্টম': 650,
-          'নবম': 700,
-          'দশম': 750
-        },
-        quarterly: {
-          'প্লে': 500,
-          'নার্সারি': 650,
-          'প্রথম': 800,
-          'দ্বিতীয়': 900,
-          'তৃতীয়': 1000,
-          'চতুর্থ': 1100,
-          'পঞ্চম': 1200,
-          'ষষ্ঠ': 1300,
-          'সপ্তম': 1400,
-          'অষ্টম': 1500,
-          'নবম': 1600,
-          'দশম': 1700
-        },
-        halfYearly: {
-          'প্লে': 900,
-          'নার্সারি': 1200,
-          'প্রথম': 1500,
-          'দ্বিতীয়': 1700,
-          'তৃতীয়': 1900,
-          'চতুর্থ': 2100,
-          'পঞ্চম': 2300,
-          'ষষ্ঠ': 2500,
-          'সপ্তম': 2700,
-          'অষ্টম': 2900,
-          'নবম': 3100,
-          'দশম': 3300
-        },
-        annual: {
-          'প্লে': 1800,
-          'নার্সারি': 2400,
-          'প্রথম': 3000,
-          'দ্বিতীয়': 3400,
-          'তৃতীয়': 3800,
-          'চতুর্থ': 4200,
-          'পঞ্চম': 4600,
-          'ষষ্ঠ': 5000,
-          'সপ্তম': 5400,
-          'অষ্টম': 5800,
-          'নবম': 6200,
-          'দশম': 6600
-        }
-      };
-
-      await this.saveExamFees(defaultSchoolId, sampleExamFees, 'system');
-      console.log('✅ Sample exam fees created successfully');
-    } catch (error) {
-      console.error('❌ Error creating sample exam fees:', error);
-    }
-  }
 };
 
 // Exam Management Functions
@@ -1400,101 +1234,6 @@ export const examQueries = {
    await deleteDoc(doc(db, 'exams', id));
  },
 
- // Create sample exams for testing
- async createSampleExams(): Promise<void> {
-   try {
-     const schoolId = 'iqra-school-2025';
-
-     const sampleExams = [
-       {
-         name: 'প্রথম সাময়িক পরীক্ষা',
-         nameEn: 'First Term Exam',
-         class: 'প্রথম',
-         subject: 'সকল বিষয়',
-         date: '২০২৪-০২-১৫',
-         startDate: '2024-02-15',
-         endDate: '2024-02-20',
-         time: '১০:০০',
-         duration: '২ ঘণ্টা',
-         totalMarks: 100,
-         students: 25,
-         status: 'সক্রিয়' as const,
-         schoolId,
-         createdBy: 'admin',
-         resultsPublished: false,
-         allowResultView: false,
-         examType: 'সাময়িক' as const,
-         passingMarks: 40,
-         gradingSystem: 'percentage' as const,
-         instructions: 'সকল প্রশ্নের উত্তর দিতে হবে। সময় ২ ঘণ্টা।',
-         venue: 'মূল ভবন'
-       },
-       {
-         name: 'মাসিক পরীক্ষা',
-         nameEn: 'Monthly Exam',
-         class: 'দ্বিতীয়',
-         subject: 'গণিত',
-         date: '২০২৪-০১-২০',
-         startDate: '2024-01-20',
-         endDate: '2024-01-20',
-         time: '১১:০০',
-         duration: '১.৫ ঘণ্টা',
-         totalMarks: 50,
-         students: 22,
-         status: 'সম্পন্ন' as const,
-         schoolId,
-         createdBy: 'admin',
-         resultsPublished: true,
-         allowResultView: true,
-         examType: 'মাসিক' as const,
-         passingMarks: 20,
-         gradingSystem: 'percentage' as const,
-         instructions: 'গণিত বিষয়ের মাসিক পরীক্ষা।',
-         venue: 'ক্লাসরুম ১'
-       },
-       {
-         name: 'বার্ষিক পরীক্ষা',
-         nameEn: 'Annual Exam',
-         class: 'তৃতীয়',
-         subject: 'সকল বিষয়',
-         date: '২০২৪-০৩-১০',
-         startDate: '2024-03-10',
-         endDate: '2024-03-25',
-         time: '০৯:০০',
-         duration: '৩ ঘণ্টা',
-         totalMarks: 200,
-         students: 28,
-         status: 'পরিকল্পনা' as const,
-         schoolId,
-         createdBy: 'admin',
-         resultsPublished: false,
-         allowResultView: false,
-         examType: 'বার্ষিক' as const,
-         passingMarks: 80,
-         gradingSystem: 'gpa' as const,
-         instructions: 'বার্ষিক পরীক্ষার সকল নিয়মকানুন মেনে চলুন।',
-         venue: 'পরীক্ষা হল',
-         gradeDistribution: {
-           'A+': { min: 80, max: 100 },
-           'A': { min: 70, max: 79 },
-           'A-': { min: 60, max: 69 },
-           'B': { min: 50, max: 59 },
-           'C': { min: 40, max: 49 },
-           'D': { min: 33, max: 39 },
-           'F': { min: 0, max: 32 }
-         }
-       }
-     ];
-
-     for (const examData of sampleExams) {
-       await this.createExam(examData);
-     }
-
-     console.log('✅ Sample exams created successfully');
-   } catch (error) {
-     console.error('❌ Error creating sample exams:', error);
-   }
- },
 
  // Toggle result publication status
  async toggleResultPublication(examId: string, publish: boolean, publishedBy: string): Promise<void> {
@@ -1755,8 +1494,20 @@ export const examResultQueries = {
      }
    }
 
-   return importedCount;
- }
+  return importedCount;
+},
+
+// Get all exam results for a school
+async getAllExamResults(schoolId: string): Promise<ExamResult[]> {
+  const q = query(
+    collection(db, 'examResults'),
+    where('schoolId', '==', schoolId),
+    orderBy('enteredAt', 'desc')
+  );
+
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ExamResult));
+}
 };
 
 // Exam Subjects Management Functions
@@ -1945,107 +1696,6 @@ export const subjectQueries = {
    await deleteDoc(doc(db, 'subjects', id));
  },
 
- // Create sample subjects for testing
- async createSampleSubjects(): Promise<void> {
-   try {
-     const schoolId = 'iqra-school-2025';
-
-     const sampleSubjects = [
-       {
-         name: 'গণিত',
-         nameEn: 'Mathematics',
-         code: 'MATH101',
-         teacherName: 'মোহাম্মদ লাভলু শেখ',
-         classes: ['ক্লাস ৮', 'ক্লাস ৯', 'ক্লাস ১০'],
-         students: 75,
-         credits: 4,
-         type: 'মূল' as const,
-         description: 'সাধারণ গণিত ও উচ্চতর গণিতের মৌলিক বিষয়সমূহ',
-         schoolId,
-         createdBy: 'admin',
-         isActive: true
-       },
-       {
-         name: 'বাংলা',
-         nameEn: 'Bangla',
-         code: 'BAN101',
-         teacherName: 'ড. সালমা খাতুন',
-         classes: ['ক্লাস ৭', 'ক্লাস ৮', 'ক্লাস ৯'],
-         students: 82,
-         credits: 5,
-         type: 'মূল' as const,
-         description: 'বাংলা ভাষা ও সাহিত্যের মৌলিক বিষয়সমূহ',
-         schoolId,
-         createdBy: 'admin',
-         isActive: true
-       },
-       {
-         name: 'ইংরেজি',
-         nameEn: 'English',
-         code: 'ENG101',
-         teacherName: 'ফারিয়া আহমেদ',
-         classes: ['ক্লাস ৮', 'ক্লাস ৯'],
-         students: 47,
-         credits: 4,
-         type: 'মূল' as const,
-         description: 'ইংরেজি ভাষার ব্যাকরণ ও সাহিত্য',
-         schoolId,
-         createdBy: 'admin',
-         isActive: true
-       },
-       {
-         name: 'বিজ্ঞান',
-         nameEn: 'Science',
-         code: 'SCI101',
-         teacherName: 'মাহবুব রহমান',
-         classes: ['ক্লাস ৭', 'ক্লাস ৮'],
-         students: 50,
-         credits: 6,
-         type: 'মূল' as const,
-         description: 'পদার্থবিজ্ঞান, রসায়ন ও জীববিজ্ঞানের প্রাথমিক ধারণা',
-         schoolId,
-         createdBy: 'admin',
-         isActive: true
-       },
-       {
-         name: 'ইসলামিক স্টাডিজ',
-         nameEn: 'Islamic Studies',
-         code: 'ISL101',
-         teacherName: 'আবু বকর সিদ্দিক',
-         classes: ['ক্লাস ৭', 'ক্লাস ৮', 'ক্লাস ৯', 'ক্লাস ১০'],
-         students: 95,
-         credits: 3,
-         type: 'ধর্মীয়' as const,
-         description: 'ইসলামি শিক্ষা ও নৈতিকতার মৌলিক বিষয়সমূহ',
-         schoolId,
-         createdBy: 'admin',
-         isActive: true
-       },
-       {
-         name: 'কম্পিউটার সায়েন্স',
-         nameEn: 'Computer Science',
-         code: 'CS101',
-         teacherName: 'তানভীর আহমেদ',
-         classes: ['ক্লাস ৯', 'ক্লাস ১০'],
-         students: 35,
-         credits: 3,
-         type: 'ঐচ্ছিক' as const,
-         description: 'কম্পিউটারের মৌলিক ধারণা ও প্রোগ্রামিং',
-         schoolId,
-         createdBy: 'admin',
-         isActive: true
-       }
-     ];
-
-     for (const subjectData of sampleSubjects) {
-       await this.createSubject(subjectData);
-     }
-
-     console.log('✅ Sample subjects created successfully');
-   } catch (error) {
-     console.error('❌ Error creating sample subjects:', error);
-   }
- },
 
  // Real-time listener for subjects
  subscribeToSubjects(
@@ -2131,112 +1781,6 @@ export const classQueries = {
     });
   },
 
-  // Create sample classes for testing
-  async createSampleClasses(): Promise<void> {
-    try {
-      const schoolId = 'iqra-school-2025';
-      const schoolName = 'ইকরা ইসলামিক স্কুল';
-
-      const sampleClasses = [
-        {
-          className: 'প্রথম',
-          section: 'এ',
-          teacherName: 'মোহাম্মদ আলী',
-          academicYear: '২০২৫',
-          totalStudents: 25,
-          isActive: true,
-          schoolId,
-          schoolName,
-          teacherId: 'teacher-1'
-        },
-        {
-          className: 'দ্বিতীয়',
-          section: 'এ',
-          teacherName: 'ফাতেমা বেগম',
-          academicYear: '২০২৫',
-          totalStudents: 22,
-          isActive: true,
-          schoolId,
-          schoolName,
-          teacherId: 'teacher-2'
-        },
-        {
-          className: 'তৃতীয়',
-          section: 'এ',
-          teacherName: 'আবদুল করিম',
-          academicYear: '২০২৫',
-          totalStudents: 28,
-          isActive: true,
-          schoolId,
-          schoolName,
-          teacherId: 'teacher-3'
-        },
-        {
-          className: 'চতুর্থ',
-          section: 'এ',
-          teacherName: 'সালেহা আক্তার',
-          academicYear: '২০২৫',
-          totalStudents: 24,
-          isActive: true,
-          schoolId,
-          schoolName,
-          teacherId: 'teacher-4'
-        },
-        {
-          className: 'পঞ্চম',
-          section: 'এ',
-          teacherName: 'রহিম উদ্দিন',
-          academicYear: '২০২৫',
-          totalStudents: 26,
-          isActive: true,
-          schoolId,
-          schoolName,
-          teacherId: 'teacher-5'
-        },
-        {
-          className: 'ষষ্ঠ',
-          section: 'এ',
-          teacherName: 'নাসরিন সুলতানা',
-          academicYear: '২০২৫',
-          totalStudents: 30,
-          isActive: true,
-          schoolId,
-          schoolName,
-          teacherId: 'teacher-6'
-        },
-        {
-          className: 'সপ্তম',
-          section: 'এ',
-          teacherName: 'কামরুল হাসান',
-          academicYear: '২০২৫',
-          totalStudents: 27,
-          isActive: true,
-          schoolId,
-          schoolName,
-          teacherId: 'teacher-7'
-        },
-        {
-          className: 'অষ্টম',
-          section: 'এ',
-          teacherName: 'জাহিদুল ইসলাম',
-          academicYear: '২০২৫',
-          totalStudents: 23,
-          isActive: true,
-          schoolId,
-          schoolName,
-          teacherId: 'teacher-8'
-        }
-      ];
-
-      for (const classData of sampleClasses) {
-        await this.createClass(classData);
-      }
-
-      console.log('✅ Sample classes created successfully');
-    } catch (error) {
-      console.error('❌ Error creating sample classes:', error);
-    }
-  },
 
   // Real-time listener for classes by school
   subscribeToClassesBySchool(
@@ -2995,77 +2539,6 @@ export const parentQueries = {
     }
   },
 
-  // Create sample parents with student associations
-  async createSampleParentsWithStudents(): Promise<void> {
-    try {
-      // First get all students to create matching parents
-      const students = await studentQueries.getAllStudents();
-      console.log('Found students for parent creation:', students.length);
-
-      if (students.length === 0) {
-        console.log('No students found, cannot create sample parents');
-        return;
-      }
-
-      // Create parents for the first few students
-      const sampleParents = [
-        {
-          name: 'মোহাম্মদ রহিম উদ্দিন',
-          email: 'rahim.uddin@gmail.com',
-          phoneNumber: '০১৭১২৩৪৫৬৭৮',
-          address: 'ধানমন্ডি, ঢাকা',
-          role: 'parent' as const,
-          schoolId: 'iqra-school-2025',
-          schoolName: 'ইকরা ইসলামিক স্কুল',
-          isActive: true,
-          employmentType: 'ব্যবসায়ী'
-        },
-        {
-          name: 'সালেহা বেগম',
-          email: 'saleha.begum@gmail.com',
-          phoneNumber: '০১৭১২৩৪৫৬৭৯',
-          address: 'উত্তরা, ঢাকা',
-          role: 'parent' as const,
-          schoolId: 'iqra-school-2025',
-          schoolName: 'ইকরা ইসলামিক স্কুল',
-          isActive: true,
-          employmentType: 'গৃহিণী'
-        },
-        {
-          name: 'আবদুল করিম',
-          email: 'abdul.karim@gmail.com',
-          phoneNumber: '০১৭১২৩৪৫৬৮০',
-          address: 'গুলশান, ঢাকা',
-          role: 'parent' as const,
-          schoolId: 'iqra-school-2025',
-          schoolName: 'ইকরা ইসলামিক স্কুল',
-          isActive: true,
-          employmentType: 'ইঞ্জিনিয়ার'
-        }
-      ];
-
-      // Create parents and update corresponding students with guardian info
-      for (let i = 0; i < Math.min(3, students.length); i++) {
-        const parentData = sampleParents[i];
-        const student = students[i];
-
-        // Create parent
-        const parentId = await this.createParent(parentData);
-        console.log(`Created parent ${parentData.name} with ID: ${parentId}`);
-
-        // Update student with guardian information
-        await studentQueries.updateStudent(student.uid, {
-          guardianName: parentData.name,
-          guardianPhone: parentData.phoneNumber
-        });
-        console.log(`Updated student ${student.name || student.displayName} with guardian info`);
-      }
-
-      console.log('Sample parents and student guardian info created successfully');
-    } catch (error) {
-      console.error('Error creating sample parents:', error);
-    }
-  },
 
   // Get parent by ID
   async getParentById(uid: string): Promise<User | null> {
@@ -3179,17 +2652,6 @@ export const dbUtils = {
     return snapshot.size;
   },
 
-  // Batch create users (for testing)
-  async createBatchUsers(users: (Omit<User, 'createdAt' | 'updatedAt'> & { uid?: string })[]): Promise<string[]> {
-    const userIds: string[] = [];
-
-    for (const userData of users) {
-      const userId = await userQueries.createUser(userData);
-      userIds.push(userId);
-    }
-
-    return userIds;
-  }
 };
 
 // Inventory Management Interfaces
@@ -3636,6 +3098,7 @@ export interface Subject {
   schoolId: string;
   createdBy: string;
   isActive: boolean;
+  isExamSubject?: boolean; // Flag to distinguish exam-specific subjects from regular subjects
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -4446,360 +3909,6 @@ export const inventoryQueries = {
     });
   },
 
-  // Sample data creation for testing
-  async createSampleInventoryData(schoolId: string): Promise<void> {
-    try {
-      // Create sample categories
-      const categories = [
-        { name: 'স্টেশনারি', nameEn: 'Stationery', description: 'Office and school supplies' },
-        { name: 'পাঠ্যবই', nameEn: 'Textbooks', description: 'Educational books and materials' },
-        { name: 'সেট', nameEn: 'Sets', description: 'School supply sets and packages' },
-        { name: 'ইলেকট্রনিক্স', nameEn: 'Electronics', description: 'Electronic devices and accessories' },
-        { name: 'সরঞ্জাম', nameEn: 'Equipment', description: 'School equipment and tools' },
-        { name: 'খেলনা', nameEn: 'Sports', description: 'Sports and recreational items' }
-      ];
-
-      for (const categoryData of categories) {
-        await this.createInventoryCategory({
-          ...categoryData,
-          isActive: true,
-          schoolId,
-          createdBy: 'system'
-        });
-      }
-
-      // Create sample inventory items - Updated with user's requested items
-      const sampleItems = [
-        // বই (Books)
-        {
-          name: 'বই - গণিত (ক্লাস ৯)',
-          nameEn: 'Mathematics Book (Class 9)',
-          description: 'Mathematics textbook for class 9 students',
-          category: 'পাঠ্যবই',
-          quantity: 50,
-          minQuantity: 20,
-          unit: 'পিস',
-          unitPrice: 120,
-          location: 'লাইব্রেরি',
-          supplier: 'Book Publishers Ltd',
-          status: 'active' as const,
-          condition: 'new' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'বই - বাংলা (ক্লাস ৮)',
-          nameEn: 'Bangla Book (Class 8)',
-          description: 'Bangla language textbook for class 8 students',
-          category: 'পাঠ্যবই',
-          quantity: 45,
-          minQuantity: 15,
-          unit: 'পিস',
-          unitPrice: 100,
-          location: 'লাইব্রেরি',
-          supplier: 'Book Publishers Ltd',
-          status: 'active' as const,
-          condition: 'new' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-
-        // স্টেশনারি আইটেমসমূহ
-        {
-          name: 'খাতা - এক লাইন (১০০ পাতা)',
-          nameEn: 'Single Line Notebook (100 pages)',
-          description: 'Single line notebook for students',
-          category: 'স্টেশনারি',
-          quantity: 200,
-          minQuantity: 50,
-          unit: 'পিস',
-          unitPrice: 25,
-          location: 'স্টোর রুম',
-          supplier: 'Stationery Suppliers',
-          status: 'active' as const,
-          condition: 'new' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'খাতা - দুই লাইন (১০০ পাতা)',
-          nameEn: 'Double Line Notebook (100 pages)',
-          description: 'Double line notebook for students',
-          category: 'স্টেশনারি',
-          quantity: 180,
-          minQuantity: 40,
-          unit: 'পিস',
-          unitPrice: 25,
-          location: 'স্টোর রুম',
-          supplier: 'Stationery Suppliers',
-          status: 'active' as const,
-          condition: 'new' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'পেন্সিল (HB)',
-          nameEn: 'Pencil (HB)',
-          description: 'HB grade pencil for writing',
-          category: 'স্টেশনারি',
-          quantity: 500,
-          minQuantity: 100,
-          unit: 'পিস',
-          unitPrice: 5,
-          location: 'স্টোর রুম',
-          supplier: 'Stationery Suppliers',
-          status: 'active' as const,
-          condition: 'new' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'চক (সাদা)',
-          nameEn: 'White Chalk',
-          description: 'White chalk for blackboards',
-          category: 'স্টেশনারি',
-          quantity: 20,
-          minQuantity: 10,
-          unit: 'বক্স',
-          unitPrice: 30,
-          location: 'ক্লাসরুম',
-          supplier: 'Stationery Suppliers',
-          status: 'active' as const,
-          condition: 'new' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'চক (রঙিন)',
-          nameEn: 'Colored Chalk',
-          description: 'Colored chalk for blackboards',
-          category: 'স্টেশনারি',
-          quantity: 5,
-          minQuantity: 5,
-          unit: 'বক্স',
-          unitPrice: 50,
-          location: 'ক্লাসরুম',
-          supplier: 'Stationery Suppliers',
-          status: 'active' as const,
-          condition: 'new' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'ইরেজার/রাবার',
-          nameEn: 'Eraser/Rubber',
-          description: 'Eraser for pencil writing',
-          category: 'স্টেশনারি',
-          quantity: 300,
-          minQuantity: 50,
-          unit: 'পিস',
-          unitPrice: 3,
-          location: 'স্টোর রুম',
-          supplier: 'Stationery Suppliers',
-          status: 'active' as const,
-          condition: 'new' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'কাটার/সিজার্স',
-          nameEn: 'Cutter/Scissors',
-          description: 'Scissors for paper cutting',
-          category: 'স্টেশনারি',
-          quantity: 25,
-          minQuantity: 10,
-          unit: 'পিস',
-          unitPrice: 15,
-          location: 'স্টোর রুম',
-          supplier: 'Stationery Suppliers',
-          status: 'active' as const,
-          condition: 'new' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'স্লেট (ছোট)',
-          nameEn: 'Small Slate',
-          description: 'Small slate for early learners',
-          category: 'স্টেশনারি',
-          quantity: 100,
-          minQuantity: 20,
-          unit: 'পিস',
-          unitPrice: 20,
-          location: 'প্রাথমিক শ্রেণি',
-          supplier: 'Educational Supplies',
-          status: 'active' as const,
-          condition: 'new' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'স্লেট (বড়)',
-          nameEn: 'Large Slate',
-          description: 'Large slate for classroom use',
-          category: 'স্টেশনারি',
-          quantity: 30,
-          minQuantity: 10,
-          unit: 'পিস',
-          unitPrice: 35,
-          location: 'প্রাথমিক শ্রেণি',
-          supplier: 'Educational Supplies',
-          status: 'active' as const,
-          condition: 'new' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'ব্রাশ/ডাস্টার',
-          nameEn: 'Brush/Duster',
-          description: 'Blackboard brush/duster for cleaning',
-          category: 'স্টেশনারি',
-          quantity: 15,
-          minQuantity: 5,
-          unit: 'পিস',
-          unitPrice: 40,
-          location: 'ক্লাসরুম',
-          supplier: 'Educational Supplies',
-          status: 'active' as const,
-          condition: 'good' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-
-        // সেট আইটেমসমূহ
-        {
-          name: 'স্কুল ব্যাগ সেট (ছোট)',
-          nameEn: 'School Bag Set (Small)',
-          description: 'Complete school bag set with books, notebooks, and stationery',
-          category: 'সেট',
-          quantity: 25,
-          minQuantity: 10,
-          unit: 'সেট',
-          unitPrice: 500,
-          location: 'স্টোর রুম',
-          supplier: 'Educational Supplies',
-          status: 'active' as const,
-          condition: 'new' as const,
-          isSet: true,
-          setItems: ['স্কুল ব্যাগ', 'খাতা (৫ পিস)', 'পেন্সিল (২ পিস)', 'ইরেজার (১ পিস)'],
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'স্কুল ব্যাগ সেট (বড়)',
-          nameEn: 'School Bag Set (Large)',
-          description: 'Large school bag set with complete stationery kit',
-          category: 'সেট',
-          quantity: 15,
-          minQuantity: 5,
-          unit: 'সেট',
-          unitPrice: 750,
-          location: 'স্টোর রুম',
-          supplier: 'Educational Supplies',
-          status: 'active' as const,
-          condition: 'new' as const,
-          isSet: true,
-          setItems: ['স্কুল ব্যাগ', 'খাতা (১০ পিস)', 'পেন্সিল (৫ পিস)', 'ইরেজার (২ পিস)', 'কাটার (১ পিস)'],
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'ক্লাসরুম স্টেশনারি সেট',
-          nameEn: 'Classroom Stationery Set',
-          description: 'Complete stationery set for classroom use',
-          category: 'সেট',
-          quantity: 8,
-          minQuantity: 3,
-          unit: 'সেট',
-          unitPrice: 200,
-          location: 'ক্লাসরুম',
-          supplier: 'Educational Supplies',
-          status: 'active' as const,
-          condition: 'new' as const,
-          isSet: true,
-          setItems: ['চক (২ বক্স)', 'ব্রাশ/ডাস্টার (২ পিস)', 'মার্কার (৫ পিস)'],
-          schoolId,
-          createdBy: 'admin'
-        },
-
-        // ইলেকট্রনিক্স আইটেমসমূহ
-        {
-          name: 'ল্যাপটপ Dell Inspiron',
-          nameEn: 'Dell Inspiron Laptop',
-          description: 'Dell Inspiron 15 laptop for teachers',
-          category: 'ইলেকট্রনিক্স',
-          quantity: 15,
-          minQuantity: 5,
-          unit: 'পিস',
-          unitPrice: 45000,
-          location: 'কম্পিউটার ল্যাব',
-          supplier: 'Dell Bangladesh',
-          status: 'active' as const,
-          condition: 'new' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'প্রজেক্টর BenQ',
-          nameEn: 'BenQ Projector',
-          description: 'BenQ multimedia projector for presentations',
-          category: 'ইলেকট্রনিক্স',
-          quantity: 0,
-          minQuantity: 2,
-          unit: 'পিস',
-          unitPrice: 35000,
-          location: 'অডিটোরিয়াম',
-          supplier: 'Tech Solutions',
-          status: 'active' as const,
-          condition: 'good' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-
-        // খেলনা/স্পোর্টস আইটেমসমূহ
-        {
-          name: 'ফুটবল',
-          nameEn: 'Football',
-          description: 'Standard size football for sports activities',
-          category: 'খেলনা',
-          quantity: 8,
-          minQuantity: 5,
-          unit: 'পিস',
-          unitPrice: 800,
-          location: 'স্পোর্টস রুম',
-          supplier: 'Sports Equipment Co',
-          status: 'active' as const,
-          condition: 'good' as const,
-          schoolId,
-          createdBy: 'admin'
-        },
-        {
-          name: 'ক্রিকেট বল',
-          nameEn: 'Cricket Ball',
-          description: 'Cricket ball for sports activities',
-          category: 'খেলনা',
-          quantity: 12,
-          minQuantity: 6,
-          unit: 'পিস',
-          unitPrice: 150,
-          location: 'স্পোর্টস রুম',
-          supplier: 'Sports Equipment Co',
-          status: 'active' as const,
-          condition: 'good' as const,
-          schoolId,
-          createdBy: 'admin'
-        }
-      ];
-
-      for (const itemData of sampleItems) {
-        await this.createInventoryItem(itemData);
-      }
-
-      console.log('✅ Sample inventory data created successfully');
-    } catch (error) {
-      console.error('❌ Error creating sample inventory data:', error);
-    }
-  }
 };
 
 export const settingsQueries = {
