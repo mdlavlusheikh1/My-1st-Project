@@ -1,0 +1,82 @@
+name: Auto Update Repository
+
+on:
+  # Trigger on push to master branch
+  push:
+    branches: [ master ]
+  
+  # Trigger on pull requests
+  pull_request:
+    branches: [ master ]
+  
+  # Trigger on schedule (daily at 2 AM UTC)
+  schedule:
+    - cron: '0 2 * * *'
+  
+  # Manual trigger
+  workflow_dispatch:
+
+jobs:
+  auto-update:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linting
+      run: npm run lint
+    
+    - name: Build project
+      run: npm run build
+      env:
+        NODE_ENV: production
+    
+    - name: Check for changes
+      id: changes
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "changes=true" >> $GITHUB_OUTPUT
+        else
+          echo "changes=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Commit and push changes
+      if: steps.changes.outputs.changes == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "Auto-update: $(date '+%Y-%m-%d %H:%M:%S')" || exit 0
+        git push
+    
+    - name: Create deployment status
+      if: always()
+      run: |
+        echo "Deployment completed at $(date)"
+        echo "Repository: ${{ github.repository }}"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Commit: ${{ github.sha }}"
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: auto-update
+    if: always()
+    
+    steps:
+    - name: Notify completion
+      run: |
+        echo "Auto-update workflow completed"
+        echo "Status: ${{ needs.auto-update.result }}"
