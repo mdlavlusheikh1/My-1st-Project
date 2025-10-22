@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import Navigation from '@/components/Navigation';
 import { Brain, Phone, Mail, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function HomePage() {
@@ -10,7 +11,6 @@ export default function HomePage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
-  const [language, setLanguage] = useState<'bn' | 'en'>('bn'); // 'bn' for Bengali, 'en' for English
 
   const heroSlides = [
     {
@@ -64,93 +64,34 @@ export default function HomePage() {
     return () => clearInterval(heroInterval);
   }, [heroSlides.length]);
 
-  const handleLoginClick = () => {
-    router.push('/auth/login');
-  };
 
-  // Language content
+  // Content for home page specific sections
   const content = {
-    bn: {
-      nav: {
-        home: 'হোম',
-        admission: 'ভর্তি',
-        homework: 'বাড়ির কাজ',
-        results: 'ফলাফল',
-        questions: 'প্রশ্ন',
-        gallery: 'গ্যালারী',
-        about: 'পরিচিতি',
-        contact: 'যোগাযোগ',
-        login: 'লগইন'
-      },
-      notice: {
-        badge: 'নোটিশ',
-        text: '🔴 জরুরি: ভর্তির শেষ তারিখ ৩০ ডিসেম্বর ২০২৪ • 📢 নতুন: অনলাইন ক্লাস শুরু হবে ১৫ জানুয়ারি • ⚠️ সাবধান: জাল সার্টিফিকেট সম্পর্কে সতর্ক থাকুন • 📅 পরীক্ষার সময়সূচী প্রকাশিত হয়েছে • 🎓 বৃত্তি আবেদনের শেষ সময় ২০ ডিসেম্বর'
-      },
-      hero: {
-        title: 'ইকরা মুকারী একাডেমী',
-        subtitle: 'শিক্ষার আলোয় আলোকিত ভবিষ্যৎ',
-        adminPanel: 'অ্যাডমিন প্যানেল'
-      },
-      aboutUs: {
-        title: 'আমাদের সম্পর্কে',
-        description1: 'ইকরা মুকারী একাডেমী ২০১৮ সালে প্রতিষ্ঠিত হয়। প্রতিষ্ঠার শুরু থেকেই আমাদের দান শিক্ষার মানোন্নয়ন ও নৈতিক শিক্ষার সমান গুরুত্ব সাথে প্রদান করে আসছে।',
-        description2: 'আমাদের লক্ষ্য হচ্ছে শিক্ষার্থীদের নৈতিকতা, চরিত্র গঠন এবং আধুনিক জ্ঞানে দক্ষ করে গড়ে তোলা। আমরা বিশ্বাস করি প্রতিটি শিক্ষার্থী অসীম সম্ভাবনার অধিকারী।',
-        readMore: 'বিস্তারিত পড়ুন'
-      },
-      admission: {
-        title: 'ভর্তি চলছে সেশন ২০২৪',
-        applyNow: '🎓 আবেদন করুন এখনই',
-        classes: '৭ম-১০ম',
-        classesLabel: 'শ্রেণী সমূহ',
-        open: 'খোলা',
-        openLabel: 'আবেদন প্রক্রিয়া',
-        deadline: 'আবেদনের শেষ তারিখ: ৩০ ডিসেম্বর ২০২৪',
-        admitNow: 'এখনই ভর্তি হন'
-      }
+    notice: {
+      badge: 'নোটিশ',
+      text: '🔴 জরুরি: ভর্তির শেষ তারিখ ৩০ ডিসেম্বর ২০২৪ • 📢 নতুন: অনলাইন ক্লাস শুরু হবে ১৫ জানুয়ারি • ⚠️ সাবধান: জাল সার্টিফিকেট সম্পর্কে সতর্ক থাকুন • 📅 পরীক্ষার সময়সূচী প্রকাশিত হয়েছে • 🎓 বৃত্তি আবেদনের শেষ সময় ২০ ডিসেম্বর'
     },
-    en: {
-      nav: {
-        home: 'Home',
-        admission: 'Admission',
-        homework: 'Homework',
-        results: 'Results',
-        questions: 'Questions',
-        gallery: 'Gallery',
-        about: 'About',
-        contact: 'Contact',
-        login: 'Login'
-      },
-      notice: {
-        badge: 'Notice',
-        text: '🔴 Urgent: Admission deadline December 30, 2024 • 📢 New: Online classes start January 15 • ⚠️ Warning: Beware of fake certificates • 📅 Exam schedule published • 🎓 Scholarship application deadline December 20'
-      },
-      hero: {
-        title: 'Iqra Mukari Academy',
-        subtitle: 'Bright Future Through Education',
-        adminPanel: 'Admin Panel'
-      },
-      aboutUs: {
-        title: 'About Us',
-        description1: 'Iqra Mukari Academy was established in 2018. Since its inception, we have been providing equal importance to improving education quality and moral education.',
-        description2: 'Our goal is to develop students in morality, character building and modern knowledge. We believe every student has unlimited potential.',
-        readMore: 'Read More'
-      },
-      admission: {
-        title: 'Admission Open Session 2024',
-        applyNow: '🎓 Apply Now',
-        classes: '7th-10th',
-        classesLabel: 'Classes',
-        open: 'Open',
-        openLabel: 'Application Process',
-        deadline: 'Application Deadline: December 30, 2024',
-        admitNow: 'Admit Now'
-      }
+    hero: {
+      adminPanel: 'অ্যাডমিন প্যানেল'
+    },
+    aboutUs: {
+      title: 'আমাদের সম্পর্কে',
+      description1: 'ইকরা মুকারী একাডেমী ২০১৮ সালে প্রতিষ্ঠিত হয়। প্রতিষ্ঠার শুরু থেকেই আমাদের দান শিক্ষার মানোন্নয়ন ও নৈতিক শিক্ষার সমান গুরুত্ব সাথে প্রদান করে আসছে।',
+      description2: 'আমাদের লক্ষ্য হচ্ছে শিক্ষার্থীদের নৈতিকতা, চরিত্র গঠন এবং আধুনিক জ্ঞানে দক্ষ করে গড়ে তোলা। আমরা বিশ্বাস করি প্রতিটি শিক্ষার্থী অসীম সম্ভাবনার অধিকারী।',
+      readMore: 'বিস্তারিত পড়ুন'
+    },
+    admission: {
+      title: 'ভর্তি চলছে সেশন ২০২৪',
+      applyNow: '🎓 আবেদন করুন এখনই',
+      classes: '৭ম-১০ম',
+      classesLabel: 'শ্রেণী সমূহ',
+      open: 'খোলা',
+      openLabel: 'আবেদন প্রক্রিয়া',
+      deadline: 'আবেদনের শেষ তারিখ: ৩০ ডিসেম্বর ২০২৪',
+      admitNow: 'এখনই ভর্তি হন'
     }
   };
 
-  const toggleLanguage = () => {
-    setLanguage(prev => prev === 'bn' ? 'en' : 'bn');
-  };
 
   if (isLoading) {
     return (
@@ -163,53 +104,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
-      <nav className="bg-white border-b border-gray-200 fixed w-full top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">ই</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">ইকরা মুকারী একাডেমী</span>
-            </div>
-            <div className="hidden lg:flex items-center space-x-2 xl:space-x-4 flex-nowrap">
-              <a href="#home" className="text-gray-700 hover:text-blue-600 transition-colors font-medium px-1 xl:px-2 py-2 whitespace-nowrap text-sm xl:text-base">{content[language].nav.home}</a>
-              <a href="#admission" className="text-gray-700 hover:text-blue-600 transition-colors font-medium px-1 xl:px-2 py-2 whitespace-nowrap text-sm xl:text-base">{content[language].nav.admission}</a>
-              <a href="#homework" className="text-gray-700 hover:text-blue-600 transition-colors font-medium px-1 xl:px-2 py-2 whitespace-nowrap text-sm xl:text-base">{content[language].nav.homework}</a>
-              <a href="#results" className="text-gray-700 hover:text-blue-600 transition-colors font-medium px-1 xl:px-2 py-2 whitespace-nowrap text-sm xl:text-base">{content[language].nav.results}</a>
-              <a href="#questions" className="text-gray-700 hover:text-blue-600 transition-colors font-medium px-1 xl:px-2 py-2 whitespace-nowrap text-sm xl:text-base">{content[language].nav.questions}</a>
-              <a href="#gallery" className="text-gray-700 hover:text-blue-600 transition-colors font-medium px-1 xl:px-2 py-2 whitespace-nowrap text-sm xl:text-base">{content[language].nav.gallery}</a>
-              <a href="#about" className="text-gray-700 hover:text-blue-600 transition-colors font-medium px-1 xl:px-2 py-2 whitespace-nowrap text-sm xl:text-base">{content[language].nav.about}</a>
-              <a href="#contact" className="text-gray-700 hover:text-blue-600 transition-colors font-medium px-1 xl:px-2 py-2 whitespace-nowrap text-sm xl:text-base">{content[language].nav.contact}</a>
-              
-              <button 
-                onClick={handleLoginClick}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 xl:px-6 py-2 rounded-lg transition-colors font-medium whitespace-nowrap text-sm xl:text-base"
-              >
-                {content[language].nav.login}
-              </button>
-              
-              {/* Language Toggle Switch */}
-              <div className="flex items-center space-x-2">
-                <span className="text-xs text-gray-600">বাং</span>
-                <button 
-                  onClick={toggleLanguage}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    language === 'en' ? 'bg-blue-600' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      language === 'en' ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-                <span className="text-xs text-gray-600">EN</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       {/* Notice Bar */}
       <div className="bg-gray-100 text-black py-2 fixed w-full top-20 z-40 border-b border-gray-300">
@@ -217,13 +112,13 @@ export default function HomePage() {
           <div className="flex items-center">
             <div className="flex items-center mr-4">
               <span className="bg-black text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse">
-                {content[language].notice.badge}
+                {content.notice.badge}
               </span>
             </div>
             <div className="flex-1 overflow-hidden">
               <div className="animate-marquee whitespace-nowrap">
                 <span className="text-sm font-medium">
-                  {content[language].notice.text}
+                  {content.notice.text}
                 </span>
               </div>
             </div>
@@ -246,7 +141,7 @@ export default function HomePage() {
       `}</style>
 
       {/* Hero Section - Now a Slider */}
-      <section id="home" className="pt-32 pb-16 text-white min-h-screen flex items-center relative overflow-hidden">
+      <section className="pt-32 pb-16 text-white min-h-screen flex items-center relative overflow-hidden">
         {/* Hero Slider Container */}
         <div className="absolute inset-0">
           <div 
@@ -268,11 +163,11 @@ export default function HomePage() {
             <div className="mb-12">
               <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight transition-all duration-500">
                 <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">
-                  {language === 'bn' ? heroSlides[currentHeroSlide].title : content[language].hero.title}
+                  {heroSlides[currentHeroSlide].title}
                 </span>
               </h1>
               <p className="text-2xl text-blue-200 font-medium mb-8 transition-all duration-500">
-                {language === 'bn' ? heroSlides[currentHeroSlide].subtitle : content[language].hero.subtitle}
+                {heroSlides[currentHeroSlide].subtitle}
               </p>
             </div>
             
@@ -294,10 +189,10 @@ export default function HomePage() {
             {/* Action Button */}
             <div className="flex justify-center">
               <button 
-                onClick={handleLoginClick}
+                onClick={() => router.push('/auth/login')}
                 className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white px-10 py-4 rounded-lg text-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
-                {content[language].hero.adminPanel}
+                {content.hero.adminPanel}
               </button>
             </div>
           </div>
@@ -341,15 +236,15 @@ export default function HomePage() {
             {/* About Us and Admission - Left Column (3/4 width) */}
             <div className="lg:col-span-3 space-y-6">
               <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">{content[language].aboutUs.title}</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">{content.aboutUs.title}</h2>
                 <div className="space-y-6 text-gray-600 mb-6 p-6 border border-gray-300 rounded-xl bg-gray-50">
                   <div className="flex items-start gap-6">
                     <div className="flex-1">
                       <p className="text-base leading-relaxed mb-4">
-                        {content[language].aboutUs.description1}
+                        {content.aboutUs.description1}
                       </p>
                       <p className="text-base leading-relaxed">
-                        {content[language].aboutUs.description2}
+                        {content.aboutUs.description2}
                       </p>
                     </div>
                     
@@ -365,7 +260,7 @@ export default function HomePage() {
                   </div>
                   <div className="mt-6">
                     <button className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-xl text-base font-semibold transition-colors transform hover:scale-105">
-                      {content[language].aboutUs.readMore}
+                      {content.aboutUs.readMore}
                     </button>
                   </div>
                 </div>
@@ -373,29 +268,32 @@ export default function HomePage() {
 
               {/* Admission Section - Much Bigger */}
               <div className="bg-white rounded-2xl shadow-xl p-10">
-                <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">{content[language].admission.title}</h2>
+                <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">{content.admission.title}</h2>
                 <div className="text-center mb-10">
                   <div className="inline-block bg-gradient-to-r from-green-500 to-blue-500 text-white px-10 py-5 rounded-full text-xl font-bold mb-6">
-                    {content[language].admission.applyNow}
+                    {content.admission.applyNow}
                   </div>
                 </div>
                 
                 <div className="space-y-8">
                   <div className="grid grid-cols-2 gap-8">
                     <div className="text-center p-6 bg-blue-50 rounded-2xl border-2 border-blue-200">
-                      <div className="text-4xl font-bold text-blue-600 mb-2">{content[language].admission.classes}</div>
-                      <div className="text-lg text-gray-700 font-semibold">{content[language].admission.classesLabel}</div>
+                      <div className="text-4xl font-bold text-blue-600 mb-2">{content.admission.classes}</div>
+                      <div className="text-lg text-gray-700 font-semibold">{content.admission.classesLabel}</div>
                     </div>
                     <div className="text-center p-6 bg-green-50 rounded-2xl border-2 border-green-200">
-                      <div className="text-4xl font-bold text-green-600 mb-2">{content[language].admission.open}</div>
-                      <div className="text-lg text-gray-700 font-semibold">{content[language].admission.openLabel}</div>
+                      <div className="text-4xl font-bold text-green-600 mb-2">{content.admission.open}</div>
+                      <div className="text-lg text-gray-700 font-semibold">{content.admission.openLabel}</div>
                     </div>
                   </div>
                   
                   <div className="text-center bg-yellow-50 p-6 rounded-2xl border-2 border-yellow-200">
-                    <p className="text-lg text-gray-700 mb-6 font-medium">{content[language].admission.deadline}</p>
-                    <button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-4 rounded-2xl text-lg font-bold transition-all duration-300 transform hover:scale-110 shadow-lg">
-                      {content[language].admission.admitNow}
+                    <p className="text-lg text-gray-700 mb-6 font-medium">{content.admission.deadline}</p>
+                    <button 
+                      onClick={() => router.push('/admission')}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-10 py-4 rounded-2xl text-lg font-bold transition-all duration-300 transform hover:scale-110 shadow-lg"
+                    >
+                      {content.admission.admitNow}
                     </button>
                   </div>
                   
@@ -521,7 +419,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer id="contact" className="bg-gray-900 text-white py-12 mt-16">
+      <footer className="bg-gray-900 text-white py-12 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">

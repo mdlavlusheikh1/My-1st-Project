@@ -115,9 +115,9 @@ function ExamSubjectsPage() {
   // Load subjects for selected class
   const loadClassSubjects = useCallback(async (classInfo: ClassType, exam?: ExamWithId | null) => {
     try {
-      const filteredSubjects = subjects.filter(subject => 
-        subject.classes?.some(cls => 
-          cls.includes(classInfo.className) || 
+      const filteredSubjects = subjects.filter(subject =>
+        subject.classes?.some(cls =>
+          cls.includes(classInfo.className) ||
           classInfo.className.includes(cls)
         )
       );
@@ -127,24 +127,38 @@ function ExamSubjectsPage() {
       if (exam) {
         console.log('🎯 Exam selected:', exam.name, 'ID:', exam.id);
         console.log('📚 Available subjects for class:', filteredSubjects.length);
-        
+
         // Check if there are saved subjects and load them automatically
         const examSubjects = await examSubjectQueries.getExamSubjects(exam.id || '');
         setHasSavedSubjects(examSubjects.length > 0);
         console.log('🔍 Saved subjects available:', examSubjects.length > 0);
-        
+
         if (examSubjects.length > 0) {
-          // Auto-load saved subjects
-          const selectedIds = new Set(
-            examSubjects
-              .map(es => es.subjectId)
-              .filter(id => id !== undefined)
-          );
-          setSelectedSubjects(selectedIds);
-          console.log(`✅ Auto-loaded ${selectedIds.size} saved subjects for exam: ${exam.name}`);
-          
-          // Show success notification for auto-loading
-          showSuccess(`${selectedIds.size}টি সংরক্ষিত বিষয় স্বয়ংক্রিয়ভাবে লোড করা হয়েছে।`);
+          // Filter saved subjects to only include those that match the current class
+          const classMatchingSavedSubjects = examSubjects.filter(savedSubject => {
+            // Check if the saved subject matches any subject in the current class
+            return filteredSubjects.some(classSubject =>
+              classSubject.id === savedSubject.subjectId
+            );
+          });
+
+          if (classMatchingSavedSubjects.length > 0) {
+            // Auto-load only the saved subjects that match the current class
+            const selectedIds = new Set(
+              classMatchingSavedSubjects
+                .map(es => es.subjectId)
+                .filter(id => id !== undefined)
+            );
+            setSelectedSubjects(selectedIds);
+            console.log(`✅ Auto-loaded ${selectedIds.size} saved subjects for exam: ${exam.name} and class: ${classInfo.className}`);
+
+            // Show success notification for auto-loading
+            showSuccess(`${selectedIds.size}টি সংরক্ষিত বিষয় স্বয়ংক্রিয়ভাবে লোড করা হয়েছে।`);
+          } else {
+            // No saved subjects match the current class, start with empty selection
+            setSelectedSubjects(new Set());
+            console.log(`ℹ️ No saved subjects found for exam: ${exam.name} and class: ${classInfo.className}. Manual selection required.`);
+          }
         } else {
           // No saved subjects, start with empty selection
           setSelectedSubjects(new Set());
@@ -220,28 +234,43 @@ function ExamSubjectsPage() {
 
   // Load saved subjects from Firebase
   const loadSavedSubjects = async () => {
-    if (!selectedExam) {
-      showError('প্রথমে একটি পরীক্ষা নির্বাচন করুন।');
+    if (!selectedExam || !selectedClass) {
+      showError('প্রথমে একটি পরীক্ষা এবং ক্লাস নির্বাচন করুন।');
       return;
     }
 
     try {
       setSaving(true);
-      console.log('📥 Loading saved subjects for:', selectedExam.name);
-      
+      console.log('📥 Loading saved subjects for:', selectedExam.name, 'and class:', selectedClass.className);
+
       const existingExamSubjects = await examSubjectQueries.getExamSubjects(selectedExam.id || '');
       console.log('🔍 Found saved subjects:', existingExamSubjects.length);
-      
+
       if (existingExamSubjects.length > 0) {
-        const selectedIds = new Set(
-          existingExamSubjects
-            .map(es => es.subjectId)
-            .filter(id => id !== undefined)
-        );
-        setSelectedSubjects(selectedIds);
-        setHasSavedSubjects(true);
-        console.log('✅ Loaded saved subjects:', selectedIds.size);
-        showSuccess(`${selectedIds.size}টি সংরক্ষিত বিষয় লোড করা হয়েছে।`);
+        // Filter saved subjects to only include those that match the current class
+        const classMatchingSavedSubjects = existingExamSubjects.filter(savedSubject => {
+          // Check if the saved subject matches any subject in the current class
+          return classSubjects.some(classSubject =>
+            classSubject.id === savedSubject.subjectId
+          );
+        });
+
+        if (classMatchingSavedSubjects.length > 0) {
+          const selectedIds = new Set(
+            classMatchingSavedSubjects
+              .map(es => es.subjectId)
+              .filter(id => id !== undefined)
+          );
+          setSelectedSubjects(selectedIds);
+          setHasSavedSubjects(true);
+          console.log('✅ Loaded saved subjects for current class:', selectedIds.size);
+          showSuccess(`${selectedIds.size}টি সংরক্ষিত বিষয় লোড করা হয়েছে।`);
+        } else {
+          setSelectedSubjects(new Set());
+          setHasSavedSubjects(false);
+          console.log('ℹ️ No saved subjects found for current class');
+          showSuccess('এই ক্লাসের জন্য কোনো সংরক্ষিত বিষয় পাওয়া যায়নি।');
+        }
       } else {
         setHasSavedSubjects(false);
         showSuccess('কোনো সংরক্ষিত বিষয় পাওয়া যায়নি।');
@@ -256,30 +285,42 @@ function ExamSubjectsPage() {
 
   // Clear all existing exam subjects from Firebase
   const clearExistingExamSubjects = async () => {
-    if (!selectedExam) {
-      showError('প্রথমে একটি পরীক্ষা নির্বাচন করুন।');
+    if (!selectedExam || !selectedClass) {
+      showError('প্রথমে একটি পরীক্ষা এবং ক্লাস নির্বাচন করুন।');
       return;
     }
 
     try {
       setSaving(true);
-      console.log('🗑️ Clearing existing exam subjects for:', selectedExam.name);
-      
+      console.log('🗑️ Clearing existing exam subjects for:', selectedExam.name, 'and class:', selectedClass.className);
+
       const existingExamSubjects = await examSubjectQueries.getExamSubjects(selectedExam.id || '');
       console.log('🔍 Found existing subjects to delete:', existingExamSubjects.length);
-      
+
       if (existingExamSubjects.length > 0) {
-        await Promise.all(
-          existingExamSubjects
-            .filter(es => es.id)
-            .map(es => examSubjectQueries.deleteExamSubject(es.id!))
-        );
-        console.log('✅ Cleared all existing exam subjects');
-        showSuccess(`${existingExamSubjects.length}টি বিদ্যমান বিষয় মুছে ফেলা হয়েছে।`);
+        // Filter subjects to only delete those that match the current class
+        const subjectsToDelete = existingExamSubjects.filter(savedSubject => {
+          return classSubjects.some(classSubject =>
+            classSubject.id === savedSubject.subjectId
+          );
+        });
+
+        if (subjectsToDelete.length > 0) {
+          await Promise.all(
+            subjectsToDelete
+              .filter(es => es.id)
+              .map(es => examSubjectQueries.deleteExamSubject(es.id!))
+          );
+          console.log(`✅ Cleared ${subjectsToDelete.length} existing exam subjects for current class`);
+          showSuccess(`${subjectsToDelete.length}টি বিদ্যমান বিষয় মুছে ফেলা হয়েছে।`);
+        } else {
+          console.log('ℹ️ No subjects to delete for current class');
+          showSuccess('এই ক্লাসের জন্য কোনো বিদ্যমান বিষয় পাওয়া যায়নি।');
+        }
       } else {
         showSuccess('কোনো বিদ্যমান বিষয় পাওয়া যায়নি।');
       }
-      
+
       // Clear current selection
       setSelectedSubjects(new Set());
       setHasSavedSubjects(false);
@@ -313,16 +354,23 @@ function ExamSubjectsPage() {
       setSaving(true);
       console.log('🔄 Starting save process...');
 
-      // Get selected subject details
+      // Get selected subject details and validate they exist in current class
       const selectedSubjectDetails = classSubjects
-        .filter(s => selectedSubjects.has(s.id!))
+        .filter(s => selectedSubjects.has(s.id!) && s.id)
         .map(s => ({
           subjectId: s.id!,
           subjectName: s.name,
           subjectCode: s.code,
-          totalMarks: 100,
+          totalMarks: s.totalMarks || 100, // Use subject's totalMarks if available
           passMarks: 33
         }));
+
+      // Ensure all selected subjects are valid for the current class
+      if (selectedSubjectDetails.length !== selectedSubjects.size) {
+        console.warn('⚠️ Some selected subjects are not available for the current class');
+        showError('কিছু নির্বাচিত বিষয় এই ক্লাসের জন্য উপলব্ধ নেই। পৃষ্ঠাটি রিফ্রেশ করে আবার চেষ্টা করুন।');
+        return;
+      }
 
       // Delete existing exam subjects for this exam
       const existingExamSubjects = await examSubjectQueries.getExamSubjects(selectedExam.id || '');
@@ -363,7 +411,11 @@ function ExamSubjectsPage() {
 
       await Promise.all(savePromises);
       console.log('✅ Successfully saved all subjects to Firebase');
+      console.log('📋 Saved subjects summary:', selectedSubjectDetails.map(s => `${s.subjectName} (${s.subjectCode})`));
       showSuccess(`${selectedSubjectDetails.length}টি বিষয় সফলভাবে সংরক্ষণ করা হয়েছে।`);
+
+      // Update the hasSavedSubjects state
+      setHasSavedSubjects(true);
 
     } catch (error) {
       console.error('❌ Error saving exam subjects:', error);
@@ -492,8 +544,8 @@ function ExamSubjectsPage() {
               <option value="">
                 {classes.length === 0 ? 'কোনো ক্লাস পাওয়া যায়নি' : '-- একটি ক্লাস নির্বাচন করুন --'}
               </option>
-              {classes.map((cls) => (
-                <option key={cls.id || cls.classId} value={cls.id || cls.classId}>
+              {classes.map((cls, index) => (
+                <option key={`class-${cls.id || cls.classId || index}`} value={cls.id || cls.classId}>
                   {cls.className} {cls.section ? `- ${cls.section}` : ''}
                 </option>
               ))}
@@ -517,8 +569,8 @@ function ExamSubjectsPage() {
                     ? 'কোনো পরীক্ষা পাওয়া যায়নি' 
                     : '-- একটি পরীক্ষা নির্বাচন করুন --'}
               </option>
-              {exams.map((exam) => (
-                <option key={exam.id} value={exam.id}>
+              {exams.map((exam, index) => (
+                <option key={`exam-${exam.id || index}`} value={exam.id}>
                   {exam.name}
                 </option>
               ))}
@@ -613,10 +665,27 @@ function ExamSubjectsPage() {
             </div>
           )}
 
+          {/* Debug info for troubleshooting */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <details className="text-xs text-gray-600">
+                <summary className="cursor-pointer font-medium">🔍 ডিবাগ তথ্য (ডেভেলপমেন্ট মোড)</summary>
+                <div className="mt-2 space-y-1">
+                  <p>📚 মোট বিষয় (subjects): {subjects.length}</p>
+                  <p>🏫 ক্লাসের বিষয় (classSubjects): {classSubjects.length}</p>
+                  <p>📋 নির্বাচিত বিষয় (selectedSubjects): {selectedSubjects.size}</p>
+                  <p>🎯 নির্বাচিত পরীক্ষা: {selectedExam?.name || 'কোনোটি নয়'}</p>
+                  <p>🏫 নির্বাচিত ক্লাস: {selectedClass?.className || 'কোনোটি নয়'}</p>
+                  <p>💾 সংরক্ষিত বিষয় আছে: {hasSavedSubjects ? 'হ্যাঁ' : 'না'}</p>
+                </div>
+              </details>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredSubjects.map((subject) => (
+            {filteredSubjects.map((subject, index) => (
               <div
-                key={subject.id}
+                key={`subject-${subject.id || index}`}
                 className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
                   selectedSubjects.has(subject.id!)
                     ? 'border-purple-500 bg-purple-50'
@@ -770,8 +839,8 @@ function ExamSubjectsPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">ক্লাস নির্বাচন করুন</option>
-                      {classes.map((cls) => (
-                        <option key={cls.id || cls.classId} value={cls.className}>
+                      {classes.map((cls, index) => (
+                        <option key={`modal-class-${cls.id || cls.classId || index}`} value={cls.className}>
                           {cls.className} {cls.section ? `- ${cls.section}` : ''}
                         </option>
                       ))}

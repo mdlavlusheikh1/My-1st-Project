@@ -5,13 +5,12 @@ import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { User as AuthUser, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { subjectQueries, Subject, Class } from '@/lib/database-queries';
-import { SCHOOL_ID } from '@/lib/constants';
+import { subjectQueries, Subject, Class, settingsQueries } from '@/lib/database-queries';
 import {
   Home, Users, BookOpen, ClipboardList, Calendar, Settings, LogOut, Menu, X,
   UserCheck, GraduationCap, Building, CreditCard, TrendingUp, Search, Bell,
   Plus, Edit, Trash2, Eye, Clock, Book, FileText,
-  Package, Loader2
+  Package, Loader2, RefreshCw
 } from 'lucide-react';
 
 function SubjectsPage() {
@@ -22,6 +21,7 @@ function SubjectsPage() {
   // Subject management states
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [subjectsError, setSubjectsError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -32,6 +32,9 @@ function SubjectsPage() {
   const [classes, setClasses] = useState<Class[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(false);
 
+  // Settings state
+  const [settings, setSettings] = useState<any>(null);
+
   // Form states
   const [subjectForm, setSubjectForm] = useState({
     name: '',
@@ -40,15 +43,24 @@ function SubjectsPage() {
     teacherName: '',
     selectedClass: '',
     type: 'মূল' as 'মূল' | 'ধর্মীয়' | 'ঐচ্ছিক',
-    description: ''
+    description: '',
+    totalMarks: 100
   });
 
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    if (!auth) {
+      console.error('Firebase auth not initialized');
+      setLoading(false);
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
+        // Load settings first, then subjects and classes
+        await loadSettings();
         loadSubjects();
         loadClasses();
       } else {
@@ -71,11 +83,31 @@ function SubjectsPage() {
     };
   }, [router]);
 
+  // Reload subjects when settings change
+  useEffect(() => {
+    if (settings && user) {
+      console.log('🔄 Settings updated, reloading subjects...');
+      loadSubjects();
+    }
+  }, [settings]);
+
+  // Load settings from Firebase
+  const loadSettings = async () => {
+    try {
+      const settingsData = await settingsQueries.getSettings();
+      if (settingsData) {
+        setSettings(settingsData);
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
+
   // Load subjects from Firebase
   const loadSubjects = async () => {
     try {
       setLoadingSubjects(true);
-      const schoolId = SCHOOL_ID;
+      const schoolId = settings?.schoolCode || 'IQRA-2025';
       let subjectsData = await subjectQueries.getActiveSubjects(schoolId);
 
       // Filter out exam-specific subjects - only show regular subjects in main subjects page
@@ -89,8 +121,7 @@ function SubjectsPage() {
     } catch (error) {
       console.error('Error loading subjects:', error);
       setSubjects([]);
-      // Show user-friendly error message instead of just logging
-      alert('বিষয়সমূহ লোড করতে ব্যর্থ হয়েছে। পৃষ্ঠাটি রিফ্রেশ করে আবার চেষ্টা করুন।');
+      setSubjectsError('বিষয়সমূহ লোড করতে ব্যর্থ হয়েছে। পৃষ্ঠাটি রিফ্রেশ করে আবার চেষ্টা করুন।');
     } finally {
       setLoadingSubjects(false);
     }
@@ -104,23 +135,25 @@ function SubjectsPage() {
 
       // Always use fallback classes for now to ensure they show
       const fallbackClasses = [
-        { classId: 'play-class', className: 'প্লে', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'nursery-class', className: 'নার্সারি', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'one-class', className: 'প্রথম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'two-class', className: 'দ্বিতীয়', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'three-class', className: 'তৃতীয়', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'four-class', className: 'চতুর্থ', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'five-class', className: 'পঞ্চম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'six-class', className: 'ষষ্ঠ', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'seven-class', className: 'সপ্তম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'eight-class', className: 'অষ্টম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'nine-class', className: 'নবম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'ten-class', className: 'দশম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true }
+        { classId: 'play-class', className: 'প্লে', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'nursery-class', className: 'নার্সারি', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'one-class', className: 'প্রথম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'two-class', className: 'দ্বিতীয়', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'three-class', className: 'তৃতীয়', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'four-class', className: 'চতুর্থ', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'five-class', className: 'পঞ্চম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'six-class', className: 'ষষ্ঠ', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'seven-class', className: 'সপ্তম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'eight-class', className: 'অষ্টম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'nine-class', className: 'নবম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'ten-class', className: 'দশম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' }
       ];
 
       setClasses(fallbackClasses);
       console.log('✅ Classes loaded (fallback):', fallbackClasses);
 
+      // Commented out Firebase loading to always use fallback classes and avoid showing old data
+      /*
       // Try to load from Firebase in background
       try {
         const { collection, getDocs } = await import('firebase/firestore');
@@ -144,7 +177,11 @@ function SubjectsPage() {
             section: cls.section || 'এ',
             teacherName: cls.teacherName || cls.teacher || 'নির্ধারিত নয়',
             totalStudents: cls.totalStudents || 0,
-            isActive: cls.isActive !== false
+            isActive: cls.isActive !== false,
+            schoolId: cls.schoolId || settings?.schoolCode || 'IQRA-2025',
+            schoolName: cls.schoolName || settings?.schoolName || 'ইকরা ইসলামিক স্কুল',
+            teacherId: cls.teacherId || '',
+            academicYear: cls.academicYear || '2025'
           }));
 
           setClasses(formattedClasses);
@@ -157,13 +194,14 @@ function SubjectsPage() {
         console.error('❌ Firebase error loading classes:', firebaseError);
         console.log('🔄 Using fallback classes due to Firebase error');
       }
+      */
     } catch (error) {
       console.error('❌ Critical error loading classes:', error);
       // Ensure we always have fallback classes
       const emergencyClasses = [
-        { classId: 'play-class', className: 'প্লে', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'nursery-class', className: 'নার্সারি', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true },
-        { classId: 'one-class', className: 'প্রথম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true }
+        { classId: 'play-class', className: 'প্লে', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'nursery-class', className: 'নার্সারি', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'one-class', className: 'প্রথম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' }
       ];
       setClasses(emergencyClasses);
     } finally {
@@ -173,8 +211,8 @@ function SubjectsPage() {
 
   // Handle create subject
   const handleCreateSubject = async () => {
-    if (!subjectForm.name || !subjectForm.code || !subjectForm.selectedClass) {
-      alert('অনুগ্রহ করে বিষয়ের নাম, কোড এবং ক্লাস নির্বাচন করুন।');
+    if (!subjectForm.name || !subjectForm.code || !subjectForm.selectedClass || !subjectForm.totalMarks) {
+      alert('অনুগ্রহ করে বিষয়ের নাম, কোড, ক্লাস এবং মোট নম্বর নির্ধারণ করুন।');
       return;
     }
 
@@ -189,7 +227,8 @@ function SubjectsPage() {
         credits: 1, // Default value
         type: subjectForm.type,
         description: subjectForm.description,
-        schoolId: SCHOOL_ID,
+        totalMarks: subjectForm.totalMarks,
+        schoolId: settings?.schoolCode || 'IQRA-2025',
         createdBy: user?.email || 'admin',
         isActive: true
       };
@@ -207,8 +246,8 @@ function SubjectsPage() {
 
   // Handle edit subject
   const handleEditSubject = async () => {
-    if (!selectedSubject || !subjectForm.name || !subjectForm.code || !subjectForm.selectedClass) {
-      alert('অনুগ্রহ করে বিষয়ের নাম, কোড এবং ক্লাস নির্বাচন করুন।');
+    if (!selectedSubject || !subjectForm.name || !subjectForm.code || !subjectForm.selectedClass || !subjectForm.totalMarks) {
+      alert('অনুগ্রহ করে বিষয়ের নাম, কোড, ক্লাস এবং মোট নম্বর নির্ধারণ করুন।');
       return;
     }
 
@@ -222,8 +261,14 @@ function SubjectsPage() {
         students: 0, // Default value
         credits: 1, // Default value
         type: subjectForm.type,
-        description: subjectForm.description
+        description: subjectForm.description,
+        totalMarks: subjectForm.totalMarks
       };
+
+      if (!selectedSubject.id) {
+        alert('বিষয়ের আইডি পাওয়া যায়নি।');
+        return;
+      }
 
       await subjectQueries.updateSubject(selectedSubject.id, updates);
       setShowEditDialog(false);
@@ -239,7 +284,7 @@ function SubjectsPage() {
 
   // Handle delete subject
   const handleDeleteSubject = async () => {
-    if (!selectedSubject) return;
+    if (!selectedSubject || !selectedSubject.id) return;
 
     try {
       await subjectQueries.deleteSubject(selectedSubject.id);
@@ -263,7 +308,8 @@ function SubjectsPage() {
       teacherName: subject.teacherName || '',
       selectedClass: subject.classes?.[0] || '',
       type: subject.type || 'মূল',
-      description: subject.description || ''
+      description: subject.description || '',
+      totalMarks: (subject.totalMarks !== undefined) ? subject.totalMarks : 100
     });
     setShowEditDialog(true);
   };
@@ -283,7 +329,8 @@ function SubjectsPage() {
       teacherName: '',
       selectedClass: '',
       type: 'মূল' as 'মূল' | 'ধর্মীয়' | 'ঐচ্ছিক',
-      description: ''
+      description: '',
+      totalMarks: 100
     });
   };
 
@@ -295,6 +342,11 @@ function SubjectsPage() {
   );
 
   const handleLogout = async () => {
+    if (!auth) {
+      console.error('Auth not initialized');
+      return;
+    }
+
     try {
       await auth.signOut();
       router.push('/');
@@ -405,30 +457,63 @@ function SubjectsPage() {
               <h2 className="text-2xl font-bold text-gray-900">বিষয় তালিকা</h2>
               <p className="text-gray-600">মোট {filteredSubjects.length} টি বিষয়</p>
             </div>
-            <button
-              onClick={() => setShowCreateDialog(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-            >
-              <Plus className="w-4 h-4" />
-              <span>নতুন বিষয়</span>
-            </button>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setSubjectsError('');
+                  loadSubjects();
+                }}
+                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 flex items-center space-x-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>রিফ্রেশ</span>
+              </button>
+              <button
+                onClick={() => setShowCreateDialog(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>নতুন বিষয়</span>
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {loadingSubjects ? (
-              <div className="col-span-full flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                <span className="ml-2 text-gray-600">বিষয় লোড হচ্ছে...</span>
+          {subjectsError ? (
+            <div className="col-span-full text-center py-12">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+                <svg className="w-12 h-12 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <h3 className="text-lg font-medium text-red-900 mb-2">লোড করতে ত্রুটি হয়েছে</h3>
+                <p className="text-red-700 mb-4">{subjectsError}</p>
+                <button
+                  onClick={() => {
+                    setSubjectsError('');
+                    loadSubjects();
+                  }}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center space-x-2 mx-auto"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>আবার চেষ্টা করুন</span>
+                </button>
               </div>
-            ) : filteredSubjects.length === 0 ? (
-              <div className="col-span-full text-center py-12">
-                <Book className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">কোনো বিষয় পাওয়া যায়নি</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  {searchTerm ? 'অনুসন্ধান ফিল্টার পরিবর্তন করুন' : 'নতুন বিষয় যোগ করুন'}
-                </p>
-              </div>
-            ) : (
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {loadingSubjects ? (
+                <div className="col-span-full flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                  <span className="ml-2 text-gray-600">বিষয় লোড হচ্ছে...</span>
+                </div>
+              ) : filteredSubjects.length === 0 ? (
+                <div className="col-span-full text-center py-12">
+                  <Book className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">কোনো বিষয় পাওয়া যায়নি</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {searchTerm ? 'অনুসন্ধান ফিল্টার পরিবর্তন করুন' : 'নতুন বিষয় যোগ করুন'}
+                  </p>
+                </div>
+              ) : (
               filteredSubjects.map((subject) => (
               <div key={subject.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -450,23 +535,27 @@ function SubjectsPage() {
                 </div>
                 
                 <div className="space-y-3 mb-4">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <GraduationCap className="w-4 h-4 mr-2 text-blue-500" />
-                    <span>{subject.teacher}</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Users className="w-4 h-4 mr-2 text-green-500" />
-                    <span>{subject.students} জন শিক্ষার্থী</span>
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <FileText className="w-4 h-4 mr-2 text-orange-500" />
-                    <span>{subject.credits} ক্রেডিট</span>
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">ক্লাসঃ </span>
-                    {subject.classes.join(', ')}
-                  </div>
-                </div>
+                 <div className="flex items-center text-sm text-gray-600">
+                   <GraduationCap className="w-4 h-4 mr-2 text-blue-500" />
+                   <span>{subject.teacherName}</span>
+                 </div>
+                 <div className="flex items-center text-sm text-gray-600">
+                   <Users className="w-4 h-4 mr-2 text-green-500" />
+                   <span>{subject.students} জন শিক্ষার্থী</span>
+                 </div>
+                 <div className="flex items-center text-sm text-gray-600">
+                   <FileText className="w-4 h-4 mr-2 text-orange-500" />
+                   <span>{subject.credits} ক্রেডিট</span>
+                 </div>
+                 <div className="flex items-center text-sm text-gray-600">
+                   <Book className="w-4 h-4 mr-2 text-purple-500" />
+                   <span>{subject.totalMarks || 100} নম্বর</span>
+                 </div>
+                 <div className="text-sm text-gray-600">
+                   <span className="font-medium">ক্লাসঃ </span>
+                   {subject.classes.join(', ')}
+                 </div>
+               </div>
 
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 line-clamp-2">{subject.description}</p>
@@ -498,6 +587,7 @@ function SubjectsPage() {
             ))
             )}
           </div>
+        )}
         </div>
       </div>
 
@@ -614,6 +704,32 @@ function SubjectsPage() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  মোট নম্বর *
+                </label>
+                <input
+                  type="text"
+                  value={subjectForm.totalMarks}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Allow Bengali numerals and convert to English for storage
+                    const englishNumber = value.replace(/[০-৯]/g, (match) => {
+                      const bengaliToEnglish: {[key: string]: string} = {
+                        '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+                        '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+                      };
+                      return bengaliToEnglish[match] || match;
+                    });
+                    setSubjectForm({...subjectForm, totalMarks: parseInt(englishNumber) || 100});
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="১০০"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  বিষয়ের জন্য সর্বমোট নম্বর (সাধারণত ১০০)
+                </p>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -764,6 +880,32 @@ function SubjectsPage() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  মোট নম্বর *
+                </label>
+                <input
+                  type="text"
+                  value={subjectForm.totalMarks}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    // Allow Bengali numerals and convert to English for storage
+                    const englishNumber = value.replace(/[০-৯]/g, (match) => {
+                      const bengaliToEnglish: {[key: string]: string} = {
+                        '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+                        '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+                      };
+                      return bengaliToEnglish[match] || match;
+                    });
+                    setSubjectForm({...subjectForm, totalMarks: parseInt(englishNumber) || 100});
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="১০০"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  বিষয়ের জন্য সর্বমোট নম্বর (সাধারণত ১০০)
+                </p>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

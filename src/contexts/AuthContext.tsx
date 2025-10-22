@@ -51,6 +51,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const fetchUserData = async (uid: string) => {
     try {
+      if (!db) {
+        console.warn('Firestore not initialized, using default user data');
+        const defaultUserData: UserData = {
+          uid,
+          email: user?.email || '',
+          role: 'admin',
+          name: user?.email?.split('@')[0] || 'User',
+        };
+        setUserData(defaultUserData);
+        return;
+      }
+
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
         const data = userDoc.data() as UserData;
@@ -84,6 +96,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      if (!auth) {
+        return { success: false, error: 'Firebase not initialized. Please check your environment variables.' };
+      }
+      
       const result = await AuthService.signIn(email, password);
       if (result.success && result.data) {
         // User data will be updated through onAuthStateChanged
@@ -98,6 +114,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
+      if (!auth) {
+        console.warn('Firebase auth not initialized');
+        return;
+      }
       await firebaseSignOut(auth);
     } catch (error) {
       console.error('Sign out error:', error);
@@ -105,6 +125,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {

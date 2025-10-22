@@ -116,9 +116,30 @@ function MarkEntryPage() {
       return allSubjects;
     }
 
-    // Filter subjects that are assigned to the selected class
+    // Filter subjects that are assigned to the selected class with flexible matching
     return allSubjects.filter(subject => {
-      return subject.classes?.includes(selectedClass);
+      if (!subject.classes || subject.classes.length === 0) {
+        return false;
+      }
+
+      return subject.classes.some(cls => {
+        // More flexible class name matching
+        const normalizeText = (text: string) => text ? text.trim().normalize('NFC').toLowerCase() : '';
+        const normalizedClass = normalizeText(cls);
+        const normalizedSelectedClass = normalizeText(selectedClass);
+
+        return normalizedClass === normalizedSelectedClass ||
+               normalizedClass.includes(normalizedSelectedClass) ||
+               normalizedSelectedClass.includes(normalizedClass) ||
+               // Handle common variations
+               normalizedSelectedClass === 'প্লে' && normalizedClass.includes('প্লে') ||
+               normalizedSelectedClass === 'নার্সারি' && normalizedClass.includes('নার্সারি') ||
+               normalizedSelectedClass === 'প্রথম' && (normalizedClass.includes('প্রথম') || normalizedClass.includes('১')) ||
+               normalizedSelectedClass === 'দ্বিতীয়' && (normalizedClass.includes('দ্বিতীয়') || normalizedClass.includes('২')) ||
+               normalizedSelectedClass === 'তৃতীয়' && (normalizedClass.includes('তৃতীয়') || normalizedClass.includes('৩')) ||
+               normalizedSelectedClass === 'চতুর্থ' && (normalizedClass.includes('চতুর্থ') || normalizedClass.includes('৪')) ||
+               normalizedSelectedClass === 'পঞ্চম' && (normalizedClass.includes('পঞ্চম') || normalizedClass.includes('৫'));
+      });
     });
   };
 
@@ -747,11 +768,32 @@ function MarkEntryPage() {
     if (previousStudentIndex >= 0) {
       const previousStudent = filteredStudents[previousStudentIndex];
       
-      // Get total marks from exam subject configuration
-      const examSubject = examSubjects.find(es => 
-        es.subjectName === selectedSubject && 
-        (es.className === previousStudent.class || es.class === previousStudent.class)
-      );
+      // Get total marks from exam subject configuration with flexible class matching
+      const examSubject = examSubjects.find(es => {
+        if (es.subjectName !== selectedSubject && es.subject !== selectedSubject) {
+          return false;
+        }
+
+        const subjectClass = es.className || es.class || es.classId || es.class_name || '';
+        if (!subjectClass || !previousStudent.class) return false;
+
+        // Use flexible class name matching
+        const normalizeText = (text: string) => text ? text.trim().normalize('NFC').toLowerCase() : '';
+        const normalizedSubjectClass = normalizeText(subjectClass);
+        const normalizedStudentClass = normalizeText(previousStudent.class);
+
+        return normalizedSubjectClass === normalizedStudentClass ||
+               normalizedSubjectClass.includes(normalizedStudentClass) ||
+               normalizedStudentClass.includes(normalizedSubjectClass) ||
+               // Handle common variations
+               normalizedStudentClass === 'প্লে' && normalizedSubjectClass.includes('প্লে') ||
+               normalizedStudentClass === 'নার্সারি' && normalizedSubjectClass.includes('নার্সারি') ||
+               normalizedStudentClass === 'প্রথম' && (normalizedSubjectClass.includes('প্রথম') || normalizedSubjectClass.includes('১')) ||
+               normalizedStudentClass === 'দ্বিতীয়' && (normalizedSubjectClass.includes('দ্বিতীয়') || normalizedSubjectClass.includes('২')) ||
+               normalizedStudentClass === 'তৃতীয়' && (normalizedSubjectClass.includes('তৃতীয়') || normalizedSubjectClass.includes('৩')) ||
+               normalizedStudentClass === 'চতুর্থ' && (normalizedSubjectClass.includes('চতুর্থ') || normalizedSubjectClass.includes('৪')) ||
+               normalizedStudentClass === 'পঞ্চম' && (normalizedSubjectClass.includes('পঞ্চম') || normalizedSubjectClass.includes('৫'));
+      });
       const totalMarks = examSubject?.totalMarks || examSubject?.fullMarks || 100;
       
       // Check for existing marks for this student, subject, and exam
@@ -807,11 +849,32 @@ function MarkEntryPage() {
     if (nextStudentIndex < filteredStudents.length) {
       const nextStudent = filteredStudents[nextStudentIndex];
       
-      // Get total marks from exam subject configuration
-      const examSubject = examSubjects.find(es => 
-        es.subjectName === selectedSubject && 
-        (es.className === nextStudent.class || es.class === nextStudent.class)
-      );
+      // Get total marks from exam subject configuration with flexible class matching
+      const examSubject = examSubjects.find(es => {
+        if (es.subjectName !== selectedSubject && es.subject !== selectedSubject) {
+          return false;
+        }
+
+        const subjectClass = es.className || es.class || es.classId || es.class_name || '';
+        if (!subjectClass || !nextStudent.class) return false;
+
+        // Use flexible class name matching
+        const normalizeText = (text: string) => text ? text.trim().normalize('NFC').toLowerCase() : '';
+        const normalizedSubjectClass = normalizeText(subjectClass);
+        const normalizedStudentClass = normalizeText(nextStudent.class);
+
+        return normalizedSubjectClass === normalizedStudentClass ||
+               normalizedSubjectClass.includes(normalizedStudentClass) ||
+               normalizedStudentClass.includes(normalizedSubjectClass) ||
+               // Handle common variations
+               normalizedStudentClass === 'প্লে' && normalizedSubjectClass.includes('প্লে') ||
+               normalizedStudentClass === 'নার্সারি' && normalizedSubjectClass.includes('নার্সারি') ||
+               normalizedStudentClass === 'প্রথম' && (normalizedSubjectClass.includes('প্রথম') || normalizedSubjectClass.includes('১')) ||
+               normalizedStudentClass === 'দ্বিতীয়' && (normalizedSubjectClass.includes('দ্বিতীয়') || normalizedSubjectClass.includes('২')) ||
+               normalizedStudentClass === 'তৃতীয়' && (normalizedSubjectClass.includes('তৃতীয়') || normalizedSubjectClass.includes('৩')) ||
+               normalizedStudentClass === 'চতুর্থ' && (normalizedSubjectClass.includes('চতুর্থ') || normalizedSubjectClass.includes('৪')) ||
+               normalizedStudentClass === 'পঞ্চম' && (normalizedSubjectClass.includes('পঞ্চম') || normalizedSubjectClass.includes('৫'));
+      });
       const totalMarks = examSubject?.totalMarks || examSubject?.fullMarks || 100;
       
       // Check for existing marks for this student, subject, and exam
@@ -984,7 +1047,7 @@ function MarkEntryPage() {
     // When both class and exam are selected, show subjects configured for that specific exam and class
     console.log('🏫 Class and Exam selected:', selectedClass, selectedExam, 'Loading exam-specific subjects for class...');
 
-    // Get subjects from exam subjects that are configured for this SPECIFIC exam and class
+    // Get subjects from exam subjects that are configured for this SPECIFIC exam and class with flexible matching
     const specificExamSubjects = examSubjects
       .filter(examSubject => {
         const subjectClass =
@@ -993,14 +1056,51 @@ function MarkEntryPage() {
           examSubject.classId ||
           examSubject.class_name ||
           '';
-        return subjectClass === selectedClass;
+
+        if (!subjectClass) return false;
+
+        // Use flexible class name matching
+        const normalizeText = (text: string) => text ? text.trim().normalize('NFC').toLowerCase() : '';
+        const normalizedSubjectClass = normalizeText(subjectClass);
+        const normalizedSelectedClass = normalizeText(selectedClass);
+
+        return normalizedSubjectClass === normalizedSelectedClass ||
+               normalizedSubjectClass.includes(normalizedSelectedClass) ||
+               normalizedSelectedClass.includes(normalizedSubjectClass) ||
+               // Handle common variations
+               normalizedSelectedClass === 'প্লে' && normalizedSubjectClass.includes('প্লে') ||
+               normalizedSelectedClass === 'নার্সারি' && normalizedSubjectClass.includes('নার্সারি') ||
+               normalizedSelectedClass === 'প্রথম' && (normalizedSubjectClass.includes('প্রথম') || normalizedSubjectClass.includes('১')) ||
+               normalizedSelectedClass === 'দ্বিতীয়' && (normalizedSubjectClass.includes('দ্বিতীয়') || normalizedSubjectClass.includes('২')) ||
+               normalizedSelectedClass === 'তৃতীয়' && (normalizedSubjectClass.includes('তৃতীয়') || normalizedSubjectClass.includes('৩')) ||
+               normalizedSelectedClass === 'চতুর্থ' && (normalizedSubjectClass.includes('চতুর্থ') || normalizedSubjectClass.includes('৪')) ||
+               normalizedSelectedClass === 'পঞ্চম' && (normalizedSubjectClass.includes('পঞ্চম') || normalizedSubjectClass.includes('৫'));
       })
       .map(examSubject => examSubject.subjectName || examSubject.subject);
 
-    // Also get subjects from existing mark entries for this specific exam and class
+    // Also get subjects from existing mark entries for this specific exam and class with flexible matching
     const examClassMarkEntrySubjects = [...new Set(
       markEntries
-        .filter(entry => entry.class === selectedClass && entry.examName === selectedExam)
+        .filter(entry => {
+          // Check class match with flexible matching
+          const normalizeText = (text: string) => text ? text.trim().normalize('NFC').toLowerCase() : '';
+          const normalizedEntryClass = normalizeText(entry.class);
+          const normalizedSelectedClass = normalizeText(selectedClass);
+
+          const classMatches = normalizedEntryClass === normalizedSelectedClass ||
+                              normalizedEntryClass.includes(normalizedSelectedClass) ||
+                              normalizedSelectedClass.includes(normalizedEntryClass) ||
+                              // Handle common variations
+                              normalizedSelectedClass === 'প্লে' && normalizedEntryClass.includes('প্লে') ||
+                              normalizedSelectedClass === 'নার্সারি' && normalizedEntryClass.includes('নার্সারি') ||
+                              normalizedSelectedClass === 'প্রথম' && (normalizedEntryClass.includes('প্রথম') || normalizedEntryClass.includes('১')) ||
+                              normalizedSelectedClass === 'দ্বিতীয়' && (normalizedEntryClass.includes('দ্বিতীয়') || normalizedEntryClass.includes('২')) ||
+                              normalizedSelectedClass === 'তৃতীয়' && (normalizedEntryClass.includes('তৃতীয়') || normalizedEntryClass.includes('৩')) ||
+                              normalizedSelectedClass === 'চতুর্থ' && (normalizedEntryClass.includes('চতুর্থ') || normalizedEntryClass.includes('৪')) ||
+                              normalizedSelectedClass === 'পঞ্চম' && (normalizedEntryClass.includes('পঞ্চম') || normalizedEntryClass.includes('৫'));
+
+          return classMatches && entry.examName === selectedExam;
+        })
         .map(entry => entry.subject)
         .filter(subject => subject && subject.trim() !== '' && subject.length > 1)
     )];
@@ -1020,7 +1120,7 @@ function MarkEntryPage() {
     // When only class is selected, show subjects configured for ANY exam in that class
     console.log('🏫 Only class selected:', selectedClass, 'Loading all exam subjects for class...');
 
-    // Get subjects from exam subjects that are configured for this class (from any exam)
+    // Get subjects from exam subjects that are configured for this class (from any exam) with flexible matching
     const classExamSubjects = examSubjects
       .filter(examSubject => {
         const subjectClass =
@@ -1029,14 +1129,49 @@ function MarkEntryPage() {
           examSubject.classId ||
           examSubject.class_name ||
           '';
-        return subjectClass === selectedClass;
+
+        if (!subjectClass) return false;
+
+        // Use flexible class name matching
+        const normalizeText = (text: string) => text ? text.trim().normalize('NFC').toLowerCase() : '';
+        const normalizedSubjectClass = normalizeText(subjectClass);
+        const normalizedSelectedClass = normalizeText(selectedClass);
+
+        return normalizedSubjectClass === normalizedSelectedClass ||
+               normalizedSubjectClass.includes(normalizedSelectedClass) ||
+               normalizedSelectedClass.includes(normalizedSubjectClass) ||
+               // Handle common variations
+               normalizedSelectedClass === 'প্লে' && normalizedSubjectClass.includes('প্লে') ||
+               normalizedSelectedClass === 'নার্সারি' && normalizedSubjectClass.includes('নার্সারি') ||
+               normalizedSelectedClass === 'প্রথম' && (normalizedSubjectClass.includes('প্রথম') || normalizedSubjectClass.includes('১')) ||
+               normalizedSelectedClass === 'দ্বিতীয়' && (normalizedSubjectClass.includes('দ্বিতীয়') || normalizedSubjectClass.includes('২')) ||
+               normalizedSelectedClass === 'তৃতীয়' && (normalizedSubjectClass.includes('তৃতীয়') || normalizedSubjectClass.includes('৩')) ||
+               normalizedSelectedClass === 'চতুর্থ' && (normalizedSubjectClass.includes('চতুর্থ') || normalizedSubjectClass.includes('৪')) ||
+               normalizedSelectedClass === 'পঞ্চম' && (normalizedSubjectClass.includes('পঞ্চম') || normalizedSubjectClass.includes('৫'));
       })
       .map(examSubject => examSubject.subjectName || examSubject.subject);
 
-    // Also get subjects from existing mark entries for this class
+    // Also get subjects from existing mark entries for this class with flexible matching
     const classMarkEntrySubjects = [...new Set(
       markEntries
-        .filter(entry => entry.class === selectedClass)
+        .filter(entry => {
+          // Check class match with flexible matching
+          const normalizeText = (text: string) => text ? text.trim().normalize('NFC').toLowerCase() : '';
+          const normalizedEntryClass = normalizeText(entry.class);
+          const normalizedSelectedClass = normalizeText(selectedClass);
+
+          return normalizedEntryClass === normalizedSelectedClass ||
+                 normalizedEntryClass.includes(normalizedSelectedClass) ||
+                 normalizedSelectedClass.includes(normalizedEntryClass) ||
+                 // Handle common variations
+                 normalizedSelectedClass === 'প্লে' && normalizedEntryClass.includes('প্লে') ||
+                 normalizedSelectedClass === 'নার্সারি' && normalizedEntryClass.includes('নার্সারি') ||
+                 normalizedSelectedClass === 'প্রথম' && (normalizedEntryClass.includes('প্রথম') || normalizedEntryClass.includes('১')) ||
+                 normalizedSelectedClass === 'দ্বিতীয়' && (normalizedEntryClass.includes('দ্বিতীয়') || normalizedEntryClass.includes('২')) ||
+                 normalizedSelectedClass === 'তৃতীয়' && (normalizedEntryClass.includes('তৃতীয়') || normalizedEntryClass.includes('৩')) ||
+                 normalizedSelectedClass === 'চতুর্থ' && (normalizedEntryClass.includes('চতুর্থ') || normalizedEntryClass.includes('৪')) ||
+                 normalizedSelectedClass === 'পঞ্চম' && (normalizedEntryClass.includes('পঞ্চম') || normalizedEntryClass.includes('৫'));
+        })
         .map(entry => entry.subject)
         .filter(subject => subject && subject.trim() !== '' && subject.length > 1)
     )];
@@ -1099,20 +1234,39 @@ function MarkEntryPage() {
   const filteredStudents = students.filter(student => {
     const studentClass = student.class || '';
     const studentClassName = student.className || studentClass;
-    
-    // More flexible class matching
-    const matchesClass = !selectedClass || 
-      studentClass === selectedClass || 
-      studentClassName === selectedClass ||
-      studentClass.includes(selectedClass) ||
-      selectedClass.includes(studentClass);
-    
+
+    // More flexible class matching with normalization
+    const matchesClass = !selectedClass ||
+      (() => {
+        const normalizeText = (text: string) => text ? text.trim().normalize('NFC').toLowerCase() : '';
+        const normalizedStudentClass = normalizeText(studentClass);
+        const normalizedStudentClassName = normalizeText(studentClassName);
+        const normalizedSelectedClass = normalizeText(selectedClass);
+
+        const matches = normalizedStudentClass === normalizedSelectedClass ||
+                       normalizedStudentClassName === normalizedSelectedClass ||
+                       normalizedStudentClass.includes(normalizedSelectedClass) ||
+                       normalizedSelectedClass.includes(normalizedStudentClass) ||
+                       normalizedStudentClassName.includes(normalizedSelectedClass) ||
+                       normalizedSelectedClass.includes(normalizedStudentClassName) ||
+                       // Handle common variations
+                       normalizedSelectedClass === 'প্লে' && (normalizedStudentClass.includes('প্লে') || normalizedStudentClassName.includes('প্লে')) ||
+                       normalizedSelectedClass === 'নার্সারি' && (normalizedStudentClass.includes('নার্সারি') || normalizedStudentClassName.includes('নার্সারি')) ||
+                       normalizedSelectedClass === 'প্রথম' && (normalizedStudentClass.includes('প্রথম') || normalizedStudentClass.includes('১') || normalizedStudentClassName.includes('প্রথম') || normalizedStudentClassName.includes('১')) ||
+                       normalizedSelectedClass === 'দ্বিতীয়' && (normalizedStudentClass.includes('দ্বিতীয়') || normalizedStudentClass.includes('২') || normalizedStudentClassName.includes('দ্বিতীয়') || normalizedStudentClassName.includes('২')) ||
+                       normalizedSelectedClass === 'তৃতীয়' && (normalizedStudentClass.includes('তৃতীয়') || normalizedStudentClass.includes('৩') || normalizedStudentClassName.includes('তৃতীয়') || normalizedStudentClassName.includes('৩')) ||
+                       normalizedSelectedClass === 'চতুর্থ' && (normalizedStudentClass.includes('চতুর্থ') || normalizedStudentClass.includes('৪') || normalizedStudentClassName.includes('চতুর্থ') || normalizedStudentClassName.includes('৪')) ||
+                       normalizedSelectedClass === 'পঞ্চম' && (normalizedStudentClass.includes('পঞ্চম') || normalizedStudentClass.includes('৫') || normalizedStudentClassName.includes('পঞ্চম') || normalizedStudentClassName.includes('৫'));
+
+        return matches;
+      })();
+
     const matchesSearch = !searchQuery ||
       (student.name || student.displayName || student.fullName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (student.studentId || student.uid || student.id || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     // Debug logging
-    if (selectedClass) {
+    if (selectedClass && process.env.NODE_ENV === 'development') {
       console.log('🔍 Student filtering:', {
         studentName: student.name || student.displayName,
         studentClass: studentClass,
@@ -1372,7 +1526,7 @@ function MarkEntryPage() {
                 </tr>
               ) : (
                 groupedStudents.map((group, index) => (
-                  <tr key={group.student.studentId || index} className="hover:bg-gray-50">
+                  <tr key={`student-${group.student.studentId || group.student.id || 'unknown'}-${index}`} className="hover:bg-gray-50">
                     <td className="px-4 py-4 whitespace-nowrap text-center text-sm font-medium text-gray-900">
                       {group.student.studentId}
                     </td>
@@ -1409,11 +1563,32 @@ function MarkEntryPage() {
                             // Pre-fill the modal with this student's info
                             const student = filteredStudents[index];
                             
-                            // Get total marks from exam subject configuration
-                            const examSubject = examSubjects.find(es => 
-                              es.subjectName === selectedSubject && 
-                              (es.className === student.class || es.class === student.class)
-                            );
+                            // Get total marks from exam subject configuration with flexible class matching
+                            const examSubject = examSubjects.find(es => {
+                              if (es.subjectName !== selectedSubject && es.subject !== selectedSubject) {
+                                return false;
+                              }
+
+                              const subjectClass = es.className || es.class || es.classId || es.class_name || '';
+                              if (!subjectClass || !student.class) return false;
+
+                              // Use flexible class name matching
+                              const normalizeText = (text: string) => text ? text.trim().normalize('NFC').toLowerCase() : '';
+                              const normalizedSubjectClass = normalizeText(subjectClass);
+                              const normalizedStudentClass = normalizeText(student.class);
+
+                              return normalizedSubjectClass === normalizedStudentClass ||
+                                     normalizedSubjectClass.includes(normalizedStudentClass) ||
+                                     normalizedStudentClass.includes(normalizedSubjectClass) ||
+                                     // Handle common variations
+                                     normalizedStudentClass === 'প্লে' && normalizedSubjectClass.includes('প্লে') ||
+                                     normalizedStudentClass === 'নার্সারি' && normalizedSubjectClass.includes('নার্সারি') ||
+                                     normalizedStudentClass === 'প্রথম' && (normalizedSubjectClass.includes('প্রথম') || normalizedSubjectClass.includes('১')) ||
+                                     normalizedStudentClass === 'দ্বিতীয়' && (normalizedSubjectClass.includes('দ্বিতীয়') || normalizedSubjectClass.includes('২')) ||
+                                     normalizedStudentClass === 'তৃতীয়' && (normalizedSubjectClass.includes('তৃতীয়') || normalizedSubjectClass.includes('৩')) ||
+                                     normalizedStudentClass === 'চতুর্থ' && (normalizedSubjectClass.includes('চতুর্থ') || normalizedSubjectClass.includes('৪')) ||
+                                     normalizedStudentClass === 'পঞ্চম' && (normalizedSubjectClass.includes('পঞ্চম') || normalizedSubjectClass.includes('৫'));
+                            });
                             const totalMarks = examSubject?.totalMarks || examSubject?.fullMarks || 100;
                             
                             // Check for existing marks for this student, subject, and exam

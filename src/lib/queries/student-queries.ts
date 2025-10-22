@@ -87,6 +87,18 @@ export const studentQueries = {
     return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
   },
 
+  // Get pending students (not yet approved)
+  async getPendingStudents(): Promise<User[]> {
+    const q = query(
+      collection(db, 'users'),
+      where('role', '==', 'student'),
+      where('isApproved', '==', false),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as User));
+  },
+
   // Get student by ID
   async getStudentById(uid: string): Promise<User | null> {
     const docRef = doc(db, 'users', uid);
@@ -160,6 +172,38 @@ export const studentQueries = {
     } catch (error) {
       console.error('Error deleting student:', error);
       throw error;
+    }
+  },
+
+  // Approve student (set as approved and active)
+  async approveStudent(uid: string): Promise<void> {
+    try {
+      const docRef = doc(db, 'users', uid);
+      await updateDoc(docRef, {
+        isApproved: true,
+        isActive: true,
+        updatedAt: serverTimestamp()
+      });
+      console.log('Student approved successfully:', uid);
+    } catch (error) {
+      console.error('Error approving student:', error);
+      throw new Error(`Failed to approve student: ${error}`);
+    }
+  },
+
+  // Reject student (set as rejected and inactive)
+  async rejectStudent(uid: string): Promise<void> {
+    try {
+      const docRef = doc(db, 'users', uid);
+      await updateDoc(docRef, {
+        isApproved: false,
+        isActive: false,
+        updatedAt: serverTimestamp()
+      });
+      console.log('Student rejected successfully:', uid);
+    } catch (error) {
+      console.error('Error rejecting student:', error);
+      throw new Error(`Failed to reject student: ${error}`);
     }
   },
 

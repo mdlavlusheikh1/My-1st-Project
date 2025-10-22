@@ -208,6 +208,17 @@ function SettingsPage() {
 
   const router = useRouter();
 
+  // Utility function to convert Bengali numerals to English
+  const convertBengaliToEnglish = (value: string): string => {
+    return value.replace(/[০-৯]/g, (match) => {
+      const bengaliToEnglish: {[key: string]: string} = {
+        '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+        '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+      };
+      return bengaliToEnglish[match] || match;
+    });
+  };
+
   // Load classes from Firebase for dropdown with real-time updates
   const loadClasses = async () => {
     setLoadingClasses(true);
@@ -825,6 +836,12 @@ function SettingsPage() {
   };
 
   useEffect(() => {
+    if (!auth) {
+      console.error('Auth not initialized');
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
@@ -951,6 +968,11 @@ function SettingsPage() {
   };
 
   const handleLogout = async () => {
+    if (!auth) {
+      console.error('Auth not initialized');
+      return;
+    }
+
     try {
       await auth.signOut();
       router.push('/');
@@ -1543,10 +1565,13 @@ function SettingsPage() {
                                   কাস্টম পরিমাণ (টাকা)
                                 </label>
                                 <input
-                                  type="number"
+                                  type="text"
                                   value={feeFormData.amount}
-                                  onChange={(e) => setFeeFormData({...feeFormData, amount: e.target.value})}
-                                  placeholder="যেমন: 1500"
+                                  onChange={(e) => {
+                                    const englishValue = convertBengaliToEnglish(e.target.value);
+                                    setFeeFormData({...feeFormData, amount: englishValue});
+                                  }}
+                                  placeholder="যেমন: ১৫০০"
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                               </div>
@@ -1691,7 +1716,10 @@ function SettingsPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                               স্কুলের ধরন
                             </label>
-                            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <select 
+                              value={formData.schoolType}
+                              onChange={(e) => setFormData({...formData, schoolType: e.target.value})}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                               <option value="মাদ্রাসা">মাদ্রাসা</option>
                               <option value="স্কুল">স্কুল</option>
                               <option value="কলেজ">কলেজ</option>
@@ -1702,7 +1730,10 @@ function SettingsPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                               সিস্টেম ল্যাংগুয়েজ
                             </label>
-                            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <select 
+                              value={formData.systemLanguage}
+                              onChange={(e) => setFormData({...formData, systemLanguage: e.target.value})}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                               <option value="bn">বাংলা</option>
                               <option value="en">English</option>
                             </select>
@@ -1716,7 +1747,8 @@ function SettingsPage() {
                         </label>
                         <textarea
                           rows={4}
-                          defaultValue="একটি আধুনিক ইসলামিক শিক্ষা প্রতিষ্ঠান যা ধর্মীয় এবং আধুনিক শিক্ষার সমন্বয়ে শিক্ষার্থীদের বিকাশে কাজ করে।"
+                          value={formData.schoolDescription}
+                          onChange={(e) => setFormData({...formData, schoolDescription: e.target.value})}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="স্কুলের বর্ণনা লিখুন..."
                         />
@@ -2727,8 +2759,12 @@ function SettingsPage() {
                         <h4 className="font-semibold text-gray-900 mb-2">মাসিক ফি</h4>
                         <div className="relative mb-4">
                           <input
-                            type="number"
-                            defaultValue="600"
+                            type="text"
+                            defaultValue="৬০০"
+                            onChange={(e) => {
+                              const englishValue = convertBengaliToEnglish(e.target.value);
+                              setFeeAmounts({...feeAmounts, monthlyFee: englishValue});
+                            }}
                             className="w-full text-center text-2xl font-bold text-blue-700 bg-white border-2 border-blue-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             placeholder="পরিমাণ লিখুন"
                           />
@@ -2737,268 +2773,290 @@ function SettingsPage() {
                         <p className="text-sm text-blue-600">প্রতি মাসে</p>
                       </div>
                     </div>
-
-                    {/* Session Fee */}
-                    <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200 hover:shadow-lg transition-all cursor-pointer">
-                      <div className="text-center">
-                        <h4 className="font-semibold text-gray-900 mb-2">সেশন ফি</h4>
-                        <div className="relative mb-4">
-                          <input
-                            type="number"
-                            defaultValue="1000"
-                            className="w-full text-center text-2xl font-bold text-green-700 bg-white border-2 border-green-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                            placeholder="পরিমাণ লিখুন"
-                          />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-600 font-bold">৳</span>
-                        </div>
-                        <p className="text-sm text-green-600">প্রতি সেশনে</p>
-                      </div>
-                    </div>
-
-                    {/* Admission Fee */}
-                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200 hover:shadow-lg transition-all cursor-pointer">
-                      <div className="text-center">
-                        <h4 className="font-semibold text-gray-900 mb-2">ভর্তি ফি</h4>
-                        <div className="relative mb-4">
-                          <input
-                            type="number"
-                            defaultValue="1200"
-                            className="w-full text-center text-2xl font-bold text-purple-700 bg-white border-2 border-purple-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                            placeholder="পরিমাণ লিখুন"
-                          />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-purple-600 font-bold">৳</span>
-                        </div>
-                        <p className="text-sm text-purple-600">এককালীন</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Exam Fee Section */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-                    <span className="w-3 h-3 bg-orange-500 rounded-full mr-3"></span>
-                    পরীক্ষার ফি
-                  </h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {/* First Term Exam Fee */}
-                    <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 p-6 rounded-xl border border-cyan-200 hover:shadow-lg transition-all cursor-pointer">
-                      <div className="text-center">
-                        <h4 className="font-semibold text-gray-900 mb-2">প্রথম সাময়িক</h4>
-                        <div className="relative mb-4">
-                          <input
-                            type="number"
-                            defaultValue="200"
-                            className="w-full text-center text-2xl font-bold text-cyan-700 bg-white border-2 border-cyan-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                            placeholder="পরিমাণ লিখুন"
-                          />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-cyan-600 font-bold">৳</span>
-                        </div>
-                        <p className="text-sm text-cyan-600">প্রথম সাময়িক পরীক্ষা</p>
-                      </div>
-                    </div>
-
-                    {/* Second Term Exam Fee */}
-                    <div className="bg-gradient-to-br from-teal-50 to-teal-100 p-6 rounded-xl border border-teal-200 hover:shadow-lg transition-all cursor-pointer">
-                      <div className="text-center">
-                        <h4 className="font-semibold text-gray-900 mb-2">দ্বিতীয় সাময়িক</h4>
-                        <div className="relative mb-4">
-                          <input
-                            type="number"
-                            defaultValue="250"
-                            className="w-full text-center text-2xl font-bold text-teal-700 bg-white border-2 border-teal-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                            placeholder="পরিমাণ লিখুন"
-                          />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-teal-600 font-bold">৳</span>
-                        </div>
-                        <p className="text-sm text-teal-600">দ্বিতীয় সাময়িক পরীক্ষা</p>
-                      </div>
-                    </div>
-
-                    {/* Annual Exam Fee */}
-                    <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 rounded-xl border border-indigo-200 hover:shadow-lg transition-all cursor-pointer">
-                      <div className="text-center">
-                        <h4 className="font-semibold text-gray-900 mb-2">বার্ষিক</h4>
-                        <div className="relative mb-4">
-                          <input
-                            type="number"
-                            defaultValue="400"
-                            className="w-full text-center text-2xl font-bold text-indigo-700 bg-white border-2 border-indigo-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="পরিমাণ লিখুন"
-                          />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-indigo-600 font-bold">৳</span>
-                        </div>
-                        <p className="text-sm text-indigo-600">বার্ষিক পরীক্ষা</p>
-                      </div>
-                    </div>
-
-                    {/* Monthly Exam Fee */}
-                    <div className="bg-gradient-to-br from-pink-50 to-pink-100 p-6 rounded-xl border border-pink-200 hover:shadow-lg transition-all cursor-pointer">
-                      <div className="text-center">
-                        <h4 className="font-semibold text-gray-900 mb-2">মাসিক</h4>
-                        <div className="relative mb-4">
-                          <input
-                            type="number"
-                            defaultValue="100"
-                            className="w-full text-center text-2xl font-bold text-pink-700 bg-white border-2 border-pink-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
-                            placeholder="পরিমাণ লিখুন"
-                          />
-                          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-pink-600 font-bold">৳</span>
-                        </div>
-                        <p className="text-sm text-pink-600">মাসিক পরীক্ষা</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Class Selection Section */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-                    <span className="w-3 h-3 bg-purple-500 rounded-full mr-3"></span>
-                    প্রযোজ্য ক্লাস নির্বাচন করুন
-                  </h3>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                    {/* All Classes Option */}
-                    <div
-                      onClick={() => setSelectedClass('all')}
-                      className={`bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-xl border-2 transition-all cursor-pointer text-center ${
-                        selectedClass === 'all'
-                          ? 'border-blue-500 bg-blue-100 shadow-lg'
-                          : 'border-gray-200 hover:border-blue-400 hover:shadow-md'
-                      }`}
-                    >
-                      <div className="font-semibold text-gray-900">সকল ক্লাস</div>
-                      <div className="text-sm text-blue-600">সমস্ত ক্লাসের জন্য</div>
-                    </div>
-
-                    {/* Individual Class Options */}
-                    {classes.slice(0, 6).map((cls) => (
-                      <div
-                        key={cls.classId}
-                        onClick={() => setSelectedClass(cls.classId)}
-                        className={`bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl border-2 transition-all cursor-pointer text-center ${
-                          selectedClass === cls.classId
-                            ? 'border-green-500 bg-green-100 shadow-lg'
-                            : 'border-gray-200 hover:border-green-400 hover:shadow-md'
-                        }`}
-                      >
-                        <div className="font-semibold text-gray-900">{cls.className}</div>
-                        <div className="text-sm text-gray-600">সেকশন {cls.section}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Selected Class Display */}
-                  {selectedClass && (
-                    <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm text-green-700">
-                        নির্বাচিত ক্লাস: <span className="font-semibold">
-                          {selectedClass === 'all' ? 'সকল ক্লাস' : classes.find(cls => cls.classId === selectedClass)?.className + ' - সেকশন ' + classes.find(cls => cls.classId === selectedClass)?.section}
-                        </span>
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Additional Settings */}
-                <div className="bg-gray-50 rounded-xl p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">অতিরিক্ত সেটিংস</h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        ফি সংগ্রহের সময়সীমা
-                      </label>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                        <option value="">সময়সীমা নির্বাচন করুন</option>
-                        <option value="1">মাসের ১ তারিখ</option>
-                        <option value="5">মাসের ৫ তারিখ</option>
-                        <option value="10">মাসের ১০ তারিখ</option>
-                        <option value="15">মাসের ১৫ তারিখ</option>
-                        <option value="30">মাসের শেষ তারিখ</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        লেট ফি (প্রতি দিন)
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="যেমন: 10"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 space-y-3">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="feeIsActive"
-                        defaultChecked
-                        className="h-4 w-4 text-blue-600 rounded"
-                      />
-                      <label htmlFor="feeIsActive" className="ml-2 text-sm text-gray-700">
-                        ফি সক্রিয় করুন
-                      </label>
-                    </div>
-
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="feeIsMandatory"
-                        className="h-4 w-4 text-blue-600 rounded"
-                      />
-                      <label htmlFor="feeIsMandatory" className="ml-2 text-sm text-gray-700">
-                        বাধ্যতামূলক ফি
-                      </label>
-                    </div>
-
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="feeAutoReminder"
-                        className="h-4 w-4 text-blue-600 rounded"
-                      />
-                      <label htmlFor="feeAutoReminder" className="ml-2 text-sm text-gray-700">
-                        স্বয়ংক্রিয় অনুস্মারক পাঠান
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Footer */}
-              <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
-                <button
-                  onClick={() => setShowFeeModal(false)}
-                  className="px-6 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  বাতিল
-                </button>
-                <button
-                  onClick={handleFeeSubmit}
-                  className="px-8 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 flex items-center gap-2 transition-all transform hover:scale-105"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>ফি সংরক্ষণ করুন</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+{/* Session Fee */}
+<div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl border border-green-200 hover:shadow-lg transition-all cursor-pointer">
+  <div className="text-center">
+    <h4 className="font-semibold text-gray-900 mb-2">সেশন ফি</h4>
+    <div className="relative mb-4">
+      <input
+        type="text"
+        defaultValue="১০০০"
+        onChange={(e) => {
+          const englishValue = convertBengaliToEnglish(e.target.value);
+          setFeeAmounts({...feeAmounts, sessionFee: englishValue});
+        }}
+        className="w-full text-center text-2xl font-bold text-green-700 bg-white border-2 border-green-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+        placeholder="পরিমাণ লিখুন"
+      />
+      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-green-600 font-bold">৳</span>
     </div>
-  );
+    <p className="text-sm text-green-600">প্রতি সেশনে</p>
+  </div>
+</div>
+
+{/* Admission Fee */}
+<div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200 hover:shadow-lg transition-all cursor-pointer">
+  <div className="text-center">
+    <h4 className="font-semibold text-gray-900 mb-2">ভর্তি ফি</h4>
+    <div className="relative mb-4">
+      <input
+        type="text"
+        defaultValue="১২০০"
+        onChange={(e) => {
+          const englishValue = convertBengaliToEnglish(e.target.value);
+          setFeeAmounts({...feeAmounts, admissionFee: englishValue});
+        }}
+        className="w-full text-center text-2xl font-bold text-purple-700 bg-white border-2 border-purple-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+        placeholder="পরিমাণ লিখুন"
+      />
+      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-purple-600 font-bold">৳</span>
+    </div>
+    <p className="text-sm text-purple-600">ভর্তির সময়</p>
+  </div>
+</div>
+</div>
+</div>
+
+{/* Exam Fee Section */}
+<div className="mb-8">
+<h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+<span className="w-3 h-3 bg-orange-500 rounded-full mr-3"></span>
+পরীক্ষা ফি
+</h3>
+
+<div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+{/* First Term Exam Fee */}
+<div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200 hover:shadow-lg transition-all cursor-pointer">
+  <div className="text-center">
+    <h4 className="font-semibold text-gray-900 mb-2">প্রথম টার্ম</h4>
+    <div className="relative mb-4">
+      <input
+        type="text"
+        defaultValue="২০০"
+        onChange={(e) => {
+          const englishValue = convertBengaliToEnglish(e.target.value);
+          setFeeAmounts({...feeAmounts, firstTermExamFee: englishValue});
+        }}
+        className="w-full text-center text-2xl font-bold text-orange-700 bg-white border-2 border-orange-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+        placeholder="পরিমাণ লিখুন"
+      />
+      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-orange-600 font-bold">৳</span>
+    </div>
+    <p className="text-sm text-orange-600">প্রথম টার্ম পরীক্ষা</p>
+  </div>
+</div>
+
+{/* Second Term Exam Fee */}
+<div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200 hover:shadow-lg transition-all cursor-pointer">
+  <div className="text-center">
+    <h4 className="font-semibold text-gray-900 mb-2">দ্বিতীয় টার্ম</h4>
+    <div className="relative mb-4">
+      <input
+        type="text"
+        defaultValue="২৫০"
+        onChange={(e) => {
+          const englishValue = convertBengaliToEnglish(e.target.value);
+          setFeeAmounts({...feeAmounts, secondTermExamFee: englishValue});
+        }}
+        className="w-full text-center text-2xl font-bold text-orange-700 bg-white border-2 border-orange-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+        placeholder="পরিমাণ লিখুন"
+      />
+      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-orange-600 font-bold">৳</span>
+    </div>
+    <p className="text-sm text-orange-600">দ্বিতীয় টার্ম পরীক্ষা</p>
+  </div>
+</div>
+
+{/* Annual Exam Fee */}
+<div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200 hover:shadow-lg transition-all cursor-pointer">
+  <div className="text-center">
+    <h4 className="font-semibold text-gray-900 mb-2">বার্ষিক</h4>
+    <div className="relative mb-4">
+      <input
+        type="text"
+        defaultValue="৪০০"
+        onChange={(e) => {
+          const englishValue = convertBengaliToEnglish(e.target.value);
+          setFeeAmounts({...feeAmounts, annualExamFee: englishValue});
+        }}
+        className="w-full text-center text-2xl font-bold text-orange-700 bg-white border-2 border-orange-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+        placeholder="পরিমাণ লিখুন"
+      />
+      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-orange-600 font-bold">৳</span>
+    </div>
+    <p className="text-sm text-orange-600">বার্ষিক পরীক্ষা</p>
+  </div>
+</div>
+
+{/* Monthly Exam Fee */}
+<div className="bg-gradient-to-br from-orange-50 to-orange-100 p-6 rounded-xl border border-orange-200 hover:shadow-lg transition-all cursor-pointer">
+  <div className="text-center">
+    <h4 className="font-semibold text-gray-900 mb-2">মাসিক টেস্ট</h4>
+    <div className="relative mb-4">
+      <input
+        type="text"
+        defaultValue="১০০"
+        onChange={(e) => {
+          const englishValue = convertBengaliToEnglish(e.target.value);
+          setFeeAmounts({...feeAmounts, monthlyExamFee: englishValue});
+        }}
+        className="w-full text-center text-2xl font-bold text-orange-700 bg-white border-2 border-orange-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+        placeholder="পরিমাণ লিখুন"
+      />
+      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-orange-600 font-bold">৳</span>
+    </div>
+    <p className="text-sm text-orange-600">মাসিক টেস্ট</p>
+  </div>
+</div>
+</div>
+</div>
+
+{/* Action Buttons */}
+<div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+<button
+onClick={() => setShowFeeModal(false)}
+className="px-6 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+>
+বাতিল
+</button>
+<button
+onClick={handleFeeSubmit}
+className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
+>
+<Save className="w-4 h-4" />
+<span>ফি সংরক্ষণ করুন</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+)}
+
+{/* Class-specific Fee Modal */}
+{showClassFeeModal && (
+<div className="fixed inset-0 z-50">
+<div
+className="absolute inset-0 bg-black bg-opacity-30"
+style={{
+backdropFilter: 'blur(4px)',
+WebkitBackdropFilter: 'blur(4px)',
+background: 'rgba(0, 0, 0, 0.3)'
+}}
+/>
+<div className="absolute inset-0 flex items-center justify-center p-4">
+<div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+<div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+<div>
+<h2 className="text-2xl font-bold text-gray-900">
+ক্লাস-স্পেসিফিক ফি যোগ করুন
+</h2>
+<p className="text-sm text-gray-600 mt-1">
+নির্দিষ্ট ক্লাসের জন্য ফি কনফিগার করুন
+</p>
+</div>
+<button
+onClick={() => setShowClassFeeModal(false)}
+className="w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+>
+<X className="w-5 h-5 text-gray-600" />
+</button>
+</div>
+
+<div className="p-8">
+<div className="space-y-6">
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    ক্লাস নির্বাচন করুন
+  </label>
+  <select
+    value={classFeeFormData.classId}
+    onChange={(e) => {
+      const selectedClass = classes.find(cls => cls.classId === e.target.value);
+      setClassFeeFormData({
+        ...classFeeFormData,
+        classId: e.target.value,
+        className: selectedClass ? selectedClass.className : ''
+      });
+    }}
+    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+  >
+    <option value="">ক্লাস নির্বাচন করুন</option>
+    {classes.map((cls) => (
+      <option key={cls.classId} value={cls.classId}>
+        {cls.className} - সেকশন {cls.section}
+      </option>
+    ))}
+  </select>
+</div>
+
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    ফি এর নাম
+  </label>
+  <input
+    type="text"
+    value={classFeeFormData.feeName}
+    onChange={(e) => setClassFeeFormData({...classFeeFormData, feeName: e.target.value})}
+    placeholder="ফি এর নাম লিখুন"
+    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+  />
+</div>
+
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    পরিমাণ (টাকা)
+  </label>
+  <input
+    type="text"
+    value={classFeeFormData.amount}
+    onChange={(e) => {
+      const englishValue = convertBengaliToEnglish(e.target.value);
+      setClassFeeFormData({...classFeeFormData, amount: englishValue});
+    }}
+    placeholder="ফি এর পরিমাণ"
+    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+  />
+</div>
+
+<div>
+  <label className="block text-sm font-medium text-gray-700 mb-2">
+    বর্ণনা
+  </label>
+  <input
+    type="text"
+    value={classFeeFormData.description}
+    onChange={(e) => setClassFeeFormData({...classFeeFormData, description: e.target.value})}
+    placeholder="ফি সম্পর্কে বিস্তারিত"
+    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+  />
+</div>
+</div>
+
+<div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+<button
+  onClick={() => setShowClassFeeModal(false)}
+  className="px-6 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+>
+  বাতিল
+</button>
+<button
+  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center space-x-2"
+>
+  <Save className="w-4 h-4" />
+  <span>ফি সংরক্ষণ করুন</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+)}
+</div>
+);
 }
 
-export default function SettingsPageWrapper() {
-  return (
-    <ProtectedRoute requireAuth={true}>
-      <SettingsPage />
-    </ProtectedRoute>
-  );
-}
+export default SettingsPage;
+           

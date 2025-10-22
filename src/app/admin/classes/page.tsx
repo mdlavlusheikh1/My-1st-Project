@@ -7,7 +7,6 @@ import { User, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
 import { classQueries, settingsQueries, Class } from '@/lib/database-queries';
-import { SCHOOL_ID } from '@/lib/constants';
 import {
   Home,
   Users,
@@ -66,11 +65,18 @@ function ClassesPage() {
   const router = useRouter();
 
   useEffect(() => {
+    if (!auth) {
+      console.error('Auth not initialized');
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-        await loadClasses();
+        // Load settings first, then classes
         await loadSettings();
+        await loadClasses();
       } else {
         router.push('/auth/login');
       }
@@ -79,6 +85,14 @@ function ClassesPage() {
 
     return () => unsubscribe();
   }, [router]);
+
+  // Reload classes when settings change
+  useEffect(() => {
+    if (settings && user) {
+      console.log('🔄 Settings updated, reloading classes...');
+      loadClasses();
+    }
+  }, [settings]);
 
   const loadSettings = async () => {
     try {
@@ -98,7 +112,7 @@ function ClassesPage() {
       const timestamp = new Date().getTime();
       console.log(`🔄 Loading classes at ${timestamp}`);
 
-      const schoolId = SCHOOL_ID; // Use consistent school ID
+      const schoolId = settings?.schoolCode || 'IQRA-2025'; // Use school ID from settings
       const classesData = await classQueries.getClassesBySchool(schoolId); // Load classes for specific school
       setClasses(classesData);
 
@@ -112,6 +126,11 @@ function ClassesPage() {
   };
 
   const handleLogout = async () => {
+    if (!auth) {
+      console.error('Auth not initialized');
+      return;
+    }
+
     try {
       await auth.signOut();
       router.push('/');
@@ -189,13 +208,10 @@ function ClassesPage() {
     setError('');
 
     try {
-      const schoolId = SCHOOL_ID; // Use consistent school ID
-      const schoolName = 'ইকরা নুরানী একাডেমী'; // Match the display name
-
       const classData = {
         ...formData,
-        schoolId,
-        schoolName,
+        schoolId: settings?.schoolCode || 'IQRA-2025',
+        schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল',
         classId: editingClass?.classId || ''
       };
 
@@ -428,14 +444,14 @@ function ClassesPage() {
                         <Building className="w-4 h-4 mr-2 text-indigo-500" />
                         <span className="font-medium">স্কুল আইডি:</span>
                         <span className="ml-1 text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded text-xs">
-                          IQRA-202531
+                          {settings?.schoolCode || 'IQRA-2025'}
                         </span>
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <Building className="w-4 h-4 mr-2 text-indigo-500" />
                         <span className="font-medium">স্কুলের নাম:</span>
                         <span className="ml-1 text-indigo-600 font-medium">
-                          ইকরা নুরানী একাডেমী
+                          {settings?.schoolName || 'ইকরা ইসলামিক স্কুল'}
                         </span>
                       </div>
                     </div>
@@ -541,10 +557,22 @@ function ClassesPage() {
                       মোট শিক্ষার্থী
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       value={formData.totalStudents}
-                      onChange={(e) => setFormData({...formData, totalStudents: parseInt(e.target.value) || 0})}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow Bengali numerals and convert to English for storage
+                        const englishNumber = value.replace(/[০-৯]/g, (match) => {
+                          const bengaliToEnglish: {[key: string]: string} = {
+                            '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+                            '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+                          };
+                          return bengaliToEnglish[match] || match;
+                        });
+                        setFormData({...formData, totalStudents: parseInt(englishNumber) || 0});
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="৩০"
                     />
                   </div>
 

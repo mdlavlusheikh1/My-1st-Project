@@ -241,6 +241,37 @@ export const classQueries = {
     }
   },
 
+  // Clean class names - remove trailing spaces and normalize
+  async cleanClassNames(schoolId?: string): Promise<number> {
+    try {
+      let q = query(collection(db, 'classes'));
+      if (schoolId) {
+        q = query(q, where('schoolId', '==', schoolId));
+      }
+
+      const snapshot = await getDocs(q);
+      let updatedCount = 0;
+
+      for (const doc of snapshot.docs) {
+        const classData = doc.data() as Class;
+        const originalName = classData.className;
+        const cleanedName = originalName.trim();
+
+        if (originalName !== cleanedName) {
+          await this.updateClass(doc.id, { className: cleanedName });
+          console.log(`✅ Cleaned class name: "${originalName}" → "${cleanedName}"`);
+          updatedCount++;
+        }
+      }
+
+      console.log(`✅ Cleaned ${updatedCount} class names`);
+      return updatedCount;
+    } catch (error) {
+      console.error('❌ Error cleaning class names:', error);
+      throw error;
+    }
+  },
+
   // Real-time listener for classes by school
   subscribeToClassesBySchool(
     schoolId: string,

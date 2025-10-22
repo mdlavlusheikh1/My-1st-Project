@@ -1,5 +1,3 @@
-'use client';
-
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -17,7 +15,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-
+export const metadata: Metadata = {
+  title: "Iqra Education System",
+  description: "Comprehensive education management system",
+};
 
 export default function RootLayout({
   children,
@@ -25,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="bn">
+    <html lang="bn" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

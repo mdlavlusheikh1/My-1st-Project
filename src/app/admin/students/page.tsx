@@ -59,7 +59,8 @@ function StudentsPage() {
     status: 'all',
     group: '',
     name: '',
-    rollNumber: ''
+    rollNumber: '',
+    showPromoted: false
   });
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -71,6 +72,8 @@ function StudentsPage() {
   const router = useRouter();
 
   useEffect(() => {
+    if (!auth) return;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
@@ -145,7 +148,9 @@ function StudentsPage() {
 
   const handleLogout = async () => {
     try {
-      await auth.signOut();
+      if (auth) {
+        await auth.signOut();
+      }
       router.push('/');
     } catch (error) {
       console.error('Logout error:', error);
@@ -197,8 +202,16 @@ function StudentsPage() {
     setStudentToDelete(null);
   };
 
-  // Enhanced search and filter logic
-  const filteredStudents = students.filter(student => {
+  // Sort students by roll number within each class
+  const sortedStudents = [...students].sort((a, b) => {
+    const classA = a.class || '';
+    const classB = b.class || '';
+    if (classA !== classB) return classA.localeCompare(classB);
+    return (parseInt(a.rollNumber || '0') - parseInt(b.rollNumber || '0'));
+  });
+
+  // Enhanced search and filter logic with promotion tracking
+  const filteredStudents = sortedStudents.filter(student => {
     const searchMatch = !searchTerm ||
       student.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -208,7 +221,8 @@ function StudentsPage() {
       student.guardianName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.guardianPhone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.section?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.group?.toLowerCase().includes(searchTerm.toLowerCase());
+      student.group?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.rollNumber?.toString().includes(searchTerm);
 
     const classMatch = !searchFilters.class || student.class === searchFilters.class;
     const sectionMatch = !searchFilters.section || student.section === searchFilters.section;
@@ -633,7 +647,7 @@ function StudentsPage() {
             </button>
             {(searchFilters.class || searchFilters.section || searchFilters.status !== 'all' || searchFilters.group || searchFilters.name || searchFilters.rollNumber) && (
               <button
-                onClick={() => setSearchFilters({ class: '', section: '', status: 'all', group: '', name: '', rollNumber: '' })}
+                onClick={() => setSearchFilters({ class: '', section: '', status: 'all', group: '', name: '', rollNumber: '', showPromoted: false })}
                 className="px-4 py-3 bg-red-100 text-red-700 rounded-lg text-sm hover:bg-red-200"
                 title="ফিল্টার পরিষ্কার করুন"
               >
@@ -671,6 +685,13 @@ function StudentsPage() {
               </button>
             </div>
             <div className="flex space-x-3">
+              <button
+                onClick={() => router.push('/admin/students/approve')}
+                className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center space-x-2"
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span>অনুমোদন</span>
+              </button>
               <button
                 onClick={() => router.push('/admin/students/import')}
                 className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center space-x-2"

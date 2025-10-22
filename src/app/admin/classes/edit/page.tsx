@@ -54,6 +54,12 @@ function ClassEditPage() {
   const classId = searchParams.get('id');
 
   useEffect(() => {
+    if (!auth) {
+      console.error('Auth not initialized');
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
@@ -121,6 +127,11 @@ function ClassEditPage() {
   };
 
   const handleLogout = async () => {
+    if (!auth) {
+      console.error('Auth not initialized');
+      return;
+    }
+
     try {
       await auth.signOut();
       router.push('/');
@@ -160,6 +171,10 @@ function ClassEditPage() {
 
     setIsSaving(true);
     try {
+      if (!classData.classId) {
+        alert('ক্লাস আইডি পাওয়া যায়নি');
+        return;
+      }
       await classQueries.updateClass(classData.classId, classData);
       setShowSuccess(true);
       setTimeout(() => {
@@ -386,9 +401,20 @@ function ClassEditPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">মোট শিক্ষার্থী</label>
                     <input
-                      type="number"
+                      type="text"
                       value={classData.totalStudents}
-                      onChange={(e) => handleInputChange('totalStudents', parseInt(e.target.value) || 0)}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow Bengali numerals and convert to English for storage
+                        const englishNumber = value.replace(/[০-৯]/g, (match) => {
+                          const bengaliToEnglish: {[key: string]: string} = {
+                            '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
+                            '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9'
+                          };
+                          return bengaliToEnglish[match] || match;
+                        });
+                        handleInputChange('totalStudents', parseInt(englishNumber) || 0);
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="৩০"
                     />
