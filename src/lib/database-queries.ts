@@ -3711,7 +3711,7 @@ export const settingsQueries = {
   // Get default settings
   getDefaultSettings(): SystemSettings {
     return {
-      schoolName: 'ইকরা ইসলামিক স্কুল',
+      schoolName: 'আমার স্কুল',
       schoolCode: 'IQRA-2025',
       schoolAddress: 'ঢাকা, বাংলাদেশ',
       schoolPhone: '+8801712345678',

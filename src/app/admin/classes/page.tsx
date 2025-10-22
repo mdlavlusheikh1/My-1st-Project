@@ -211,7 +211,7 @@ function ClassesPage() {
       const classData = {
         ...formData,
         schoolId: settings?.schoolCode || 'IQRA-2025',
-        schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল',
+        schoolName: settings?.schoolName || 'আমার স্কুল',
         classId: editingClass?.classId || ''
       };
 
@@ -451,7 +451,7 @@ function ClassesPage() {
                         <Building className="w-4 h-4 mr-2 text-indigo-500" />
                         <span className="font-medium">স্কুলের নাম:</span>
                         <span className="ml-1 text-indigo-600 font-medium">
-                          {settings?.schoolName || 'ইকরা ইসলামিক স্কুল'}
+                          {settings?.schoolName || 'আমার স্কুল'}
                         </span>
                       </div>
                     </div>

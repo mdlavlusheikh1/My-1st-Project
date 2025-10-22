@@ -256,7 +256,7 @@ function ExamFeeManagementPage() {
             totalStudents: 20,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-play'
           },
           {
@@ -267,7 +267,7 @@ function ExamFeeManagementPage() {
             totalStudents: 25,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-nursery'
           },
           {
@@ -278,7 +278,7 @@ function ExamFeeManagementPage() {
             totalStudents: 30,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-1'
           },
           {
@@ -289,7 +289,7 @@ function ExamFeeManagementPage() {
             totalStudents: 28,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-2'
           },
           {
@@ -300,7 +300,7 @@ function ExamFeeManagementPage() {
             totalStudents: 32,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-3'
           },
           {
@@ -311,7 +311,7 @@ function ExamFeeManagementPage() {
             totalStudents: 29,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-4'
           },
           {
@@ -322,7 +322,7 @@ function ExamFeeManagementPage() {
             totalStudents: 31,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-5'
           },
           {
@@ -333,7 +333,7 @@ function ExamFeeManagementPage() {
             totalStudents: 27,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-6'
           },
           {
@@ -344,7 +344,7 @@ function ExamFeeManagementPage() {
             totalStudents: 26,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-7'
           },
           {
@@ -355,7 +355,7 @@ function ExamFeeManagementPage() {
             totalStudents: 24,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-8'
           },
           {
@@ -366,7 +366,7 @@ function ExamFeeManagementPage() {
             totalStudents: 22,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-9'
           },
           {
@@ -377,7 +377,7 @@ function ExamFeeManagementPage() {
             totalStudents: 20,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-10'
           },
           {
@@ -388,7 +388,7 @@ function ExamFeeManagementPage() {
             totalStudents: 18,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-11'
           },
           {
@@ -399,7 +399,7 @@ function ExamFeeManagementPage() {
             totalStudents: 16,
             isActive: true,
             schoolId: schoolId,
-            schoolName: 'ইকরা ইসলামিক স্কুল',
+            schoolName: 'আমার স্কুল',
             teacherId: 'teacher-12'
           }
         ];

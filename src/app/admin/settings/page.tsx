@@ -86,7 +86,7 @@ function SettingsPage() {
   // Form state for controlled components - all fields initialized with proper values
   const [formData, setFormData] = useState({
     // General settings
-    schoolName: 'ইকরা ইসলামিক স্কুল',
+    schoolName: 'আমার স্কুল',
     schoolCode: 'IQRA-2025',
     schoolAddress: 'ঢাকা, বাংলাদেশ',
     schoolPhone: '+8801712345678',
@@ -989,7 +989,7 @@ function SettingsPage() {
 
     try {
       // Get form data from controlled components
-      const schoolName = formData.schoolName || 'ইকরা ইসলামিক স্কুল';
+      const schoolName = formData.schoolName || 'আমার স্কুল';
       const schoolCode = formData.schoolCode || 'IQRA-2025';
       const schoolAddress = formData.schoolAddress || 'ঢাকা, বাংলাদেশ';
       const schoolPhone = formData.schoolPhone || '+8801712345678';

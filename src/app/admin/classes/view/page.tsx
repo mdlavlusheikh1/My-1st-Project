@@ -290,7 +290,7 @@ function ClassViewPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-500">স্কুলের নাম</p>
-                    <p className="text-lg font-semibold text-indigo-600">ইকরা নুরানী একাডেমী</p>
+                    <p className="text-lg font-semibold text-indigo-600">আমার স্কুল নুরানী একাডেমী</p>
                   </div>
                 </div>
               </div>

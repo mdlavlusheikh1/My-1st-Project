@@ -429,7 +429,7 @@ function StudentIdCardsPage() {
                   {/* Header */}
                   <div className="p-3 text-center bg-white">
                     <h2 className="font-bold text-lg text-blue-900 leading-tight mb-1">
-                      ইকরা নুরানী একাডেমী
+                      আমার স্কুল নুরানী একাডেমী
                     </h2>
                     <p className="text-xs text-gray-700 leading-tight mb-1">
                       চান্দাইকোনা, রায়গঞ্জ, সিরাজগঞ্জ
@@ -521,7 +521,7 @@ function StudentIdCardsPage() {
                   {/* School Information Header */}
                   <div className="p-3 text-center bg-white">
                     <h2 className="font-bold text-base text-blue-900 leading-tight mb-1">
-                      ইকরা নুরানী একাডেমী
+                      আমার স্কুল নুরানী একাডেমী
                     </h2>
                     <p className="text-xs text-gray-700 leading-tight mb-1">
                       চান্দাইকোনা, রায়গঞ্জ, সিরাজগঞ্জ

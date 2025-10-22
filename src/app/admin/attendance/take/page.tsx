@@ -366,7 +366,7 @@ function TakeAttendancePage() {
         classId: selectedClass,
         className: selectedClass,
         schoolId: 'iqra-school',
-        schoolName: 'ইকরা ইসলামিক স্কুল',
+        schoolName: 'আমার স্কুল',
         date: selectedDate,
         status,
         timestamp: serverTimestamp() as any,

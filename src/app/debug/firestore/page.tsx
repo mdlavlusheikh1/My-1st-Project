@@ -78,7 +78,7 @@ export default function FirestoreDebugPage() {
         phone: '+880 1700000000',
         role: 'student',
         schoolId: 'school-abc-123',
-        schoolName: 'ইকরা মুকারী একাডেমী',
+        schoolName: 'আমার স্কুল',
         address: 'Test Address',
         isActive: false,
         profileImage: '',

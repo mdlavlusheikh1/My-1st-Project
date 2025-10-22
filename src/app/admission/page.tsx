@@ -457,7 +457,7 @@ function PublicAdmissionPage() {
         previousGPA: newStudent.previousGPA,
         role: 'student' as const,
         schoolId: settings?.schoolCode || 'IQRA-2025',
-        schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল',
+        schoolName: settings?.schoolName || 'আমার স্কুল',
         isActive: false, // Inactive until approved
         isApproved: false, // For online admission, needs approval
         createdAt: new Date(),
@@ -528,7 +528,7 @@ function PublicAdmissionPage() {
             </div>
             <h1 className="text-6xl font-bold mb-6 text-shadow-lg">ভর্তি আবেদন</h1>
             <p className="text-2xl text-blue-100 mb-10 max-w-4xl mx-auto leading-relaxed">
-              ইকরা ইসলামিক স্কুলে আপনার সন্তানের ভবিষ্যৎ গড়ে তুলুন। 
+              আমার স্কুলে আপনার সন্তানের ভবিষ্যৎ গড়ে তুলুন। 
               অনলাইনে সহজেই ভর্তি আবেদন করুন এবং উত্তম শিক্ষার সুযোগ গ্রহণ করুন।
             </p>
             <div className="flex flex-wrap justify-center gap-8 text-base">
@@ -1233,7 +1233,7 @@ function PublicAdmissionPage() {
                 <span className="text-white font-bold text-lg">ই</span>
               </div>
             </div>
-            <h3 className="text-xl font-bold mb-2">ইকরা ইসলামিক স্কুল</h3>
+            <h3 className="text-xl font-bold mb-2">আমার স্কুল</h3>
             <p className="text-gray-400 mb-4">ভালোবাসা দিয়ে শিক্ষা, ইসলামিক মূল্যবোধে জীবন গড়া</p>
             <div className="flex justify-center space-x-6 text-sm text-gray-400">
               <span>📞 +৮৮০ ১৭১১ ২৩৪৫৬৭</span>

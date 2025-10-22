@@ -34,7 +34,7 @@ function SignUpPage() {
     phone: '',
     role: 'student',
     schoolId: 'school-abc-123', // Default school ID
-    schoolName: 'ইকরা মুকারী একাডেমী',
+    schoolName: 'আমার স্কুল',
     address: '',
     guardianName: '',
     guardianPhone: '',
@@ -191,7 +191,7 @@ function SignUpPage() {
               <User className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">নতুন অ্যাকাউন্ট তৈরি করুন</h1>
-            <p className="text-gray-600">ইকরা মুকারী একাডেমীতে যোগ দিন</p>
+            <p className="text-gray-600">আমার স্কুলতে যোগ দিন</p>
           </div>
 
           {/* Error/Success Messages */}
@@ -477,7 +477,7 @@ function SignUpPage() {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-white text-sm">
-            © 2024 ইকরা মুকারী একাডেমী। সর্বস্বত্ব সংরক্ষিত।
+            © 2024 আমার স্কুল। সর্বস্বত্ব সংরক্ষিত।
           </p>
         </div>
       </div>

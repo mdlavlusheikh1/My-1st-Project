@@ -55,7 +55,7 @@ const Navigation = () => {
             <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
               <span className="text-white font-bold text-sm">ই</span>
             </div>
-            <span className="text-xl font-bold text-gray-900">ইকরা মুকারী একাডেমী</span>
+            <span className="text-xl font-bold text-gray-900">আমার স্কুল</span>
           </div>
           <div className="hidden lg:flex items-center space-x-2 xl:space-x-4 flex-nowrap">
             <a href="/" className="text-gray-700 hover:text-blue-600 transition-colors font-medium px-1 xl:px-2 py-2 whitespace-nowrap text-sm xl:text-base">{content[language].nav.home}</a>

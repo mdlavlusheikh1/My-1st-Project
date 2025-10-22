@@ -114,7 +114,7 @@ export const classQueries = {
   async createSampleClasses(): Promise<void> {
     try {
       const schoolId = SCHOOL_ID;
-      const schoolName = 'ইকরা ইসলামিক স্কুল';
+      const schoolName = 'আমার স্কুল';
 
       const sampleClasses = [
         {

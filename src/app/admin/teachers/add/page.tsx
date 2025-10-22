@@ -160,7 +160,7 @@ function AddTeacherPage() {
         setNewTeacher(prev => ({
           ...prev,
           schoolId: systemSettings?.schoolCode || 'IQRA-2025',
-          schoolName: systemSettings?.schoolName || 'ইকরা ইসলামিক স্কুল'
+          schoolName: systemSettings?.schoolName || 'আমার স্কুল'
         }));
       } catch (error) {
         console.error('Error loading settings:', error);

@@ -269,7 +269,7 @@ function AddStudentPage() {
         group: newStudent.group,
         role: 'student' as const,
         schoolId: settings?.schoolCode || 'IQRA-2025',
-        schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল',
+        schoolName: settings?.schoolName || 'আমার স্কুল',
         isActive: true,
         isApproved: true,
         createdAt: new Date(),

@@ -135,18 +135,18 @@ function SubjectsPage() {
 
       // Always use fallback classes for now to ensure they show
       const fallbackClasses = [
-        { classId: 'play-class', className: 'প্লে', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'nursery-class', className: 'নার্সারি', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'one-class', className: 'প্রথম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'two-class', className: 'দ্বিতীয়', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'three-class', className: 'তৃতীয়', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'four-class', className: 'চতুর্থ', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'five-class', className: 'পঞ্চম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'six-class', className: 'ষষ্ঠ', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'seven-class', className: 'সপ্তম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'eight-class', className: 'অষ্টম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'nine-class', className: 'নবম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'ten-class', className: 'দশম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' }
+        { classId: 'play-class', className: 'প্লে', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'nursery-class', className: 'নার্সারি', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'one-class', className: 'প্রথম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'two-class', className: 'দ্বিতীয়', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'three-class', className: 'তৃতীয়', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'four-class', className: 'চতুর্থ', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'five-class', className: 'পঞ্চম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'six-class', className: 'ষষ্ঠ', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'seven-class', className: 'সপ্তম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'eight-class', className: 'অষ্টম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'nine-class', className: 'নবম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'ten-class', className: 'দশম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' }
       ];
 
       setClasses(fallbackClasses);
@@ -179,7 +179,7 @@ function SubjectsPage() {
             totalStudents: cls.totalStudents || 0,
             isActive: cls.isActive !== false,
             schoolId: cls.schoolId || settings?.schoolCode || 'IQRA-2025',
-            schoolName: cls.schoolName || settings?.schoolName || 'ইকরা ইসলামিক স্কুল',
+            schoolName: cls.schoolName || settings?.schoolName || 'আমার স্কুল',
             teacherId: cls.teacherId || '',
             academicYear: cls.academicYear || '2025'
           }));
@@ -199,9 +199,9 @@ function SubjectsPage() {
       console.error('❌ Critical error loading classes:', error);
       // Ensure we always have fallback classes
       const emergencyClasses = [
-        { classId: 'play-class', className: 'প্লে', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'nursery-class', className: 'নার্সারি', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' },
-        { classId: 'one-class', className: 'প্রথম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'ইকরা ইসলামিক স্কুল', teacherId: '', academicYear: '2025' }
+        { classId: 'play-class', className: 'প্লে', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'nursery-class', className: 'নার্সারি', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' },
+        { classId: 'one-class', className: 'প্রথম', section: 'এ', teacherName: 'নির্ধারিত নয়', totalStudents: 0, isActive: true, schoolId: settings?.schoolCode || 'IQRA-2025', schoolName: settings?.schoolName || 'আমার স্কুল', teacherId: '', academicYear: '2025' }
       ];
       setClasses(emergencyClasses);
     } finally {

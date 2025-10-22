@@ -198,7 +198,7 @@ function LoginPage() {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-white text-sm mb-2">
-            © 2024 ইকরা মুকারী একাডেমী। সর্বস্বত্ব সংরক্ষিত।
+            © 2024 আমার স্কুল। সর্বস্বত্ব সংরক্ষিত।
           </p>
           <div className="space-x-4">
             <a href="/debug/firestore" className="text-blue-200 hover:text-white text-xs underline">

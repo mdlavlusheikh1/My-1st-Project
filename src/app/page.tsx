@@ -15,7 +15,7 @@ export default function HomePage() {
   const heroSlides = [
     {
       id: 1,
-      title: "ইকরা মুকারী একাডেমী",
+      title: "আমার স্কুল",
       subtitle: "আধুনিক শিক্ষা ও প্রযুক্তির সমন্বয়",
       bgGradient: "from-blue-900 via-purple-900 to-teal-800",
       aiText: "AI",
@@ -76,7 +76,7 @@ export default function HomePage() {
     },
     aboutUs: {
       title: 'আমাদের সম্পর্কে',
-      description1: 'ইকরা মুকারী একাডেমী ২০১৮ সালে প্রতিষ্ঠিত হয়। প্রতিষ্ঠার শুরু থেকেই আমাদের দান শিক্ষার মানোন্নয়ন ও নৈতিক শিক্ষার সমান গুরুত্ব সাথে প্রদান করে আসছে।',
+      description1: 'আমার স্কুল ২০১৮ সালে প্রতিষ্ঠিত হয়। প্রতিষ্ঠার শুরু থেকেই আমাদের দান শিক্ষার মানোন্নয়ন ও নৈতিক শিক্ষার সমান গুরুত্ব সাথে প্রদান করে আসছে।',
       description2: 'আমাদের লক্ষ্য হচ্ছে শিক্ষার্থীদের নৈতিকতা, চরিত্র গঠন এবং আধুনিক জ্ঞানে দক্ষ করে গড়ে তোলা। আমরা বিশ্বাস করি প্রতিটি শিক্ষার্থী অসীম সম্ভাবনার অধিকারী।',
       readMore: 'বিস্তারিত পড়ুন'
     },
@@ -423,7 +423,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
-              <h3 className="text-2xl font-bold mb-4">ইকরা মুকারী একাডেমী</h3>
+              <h3 className="text-2xl font-bold mb-4">আমার স্কুল</h3>
               <p className="text-gray-300 mb-6 leading-relaxed">আদর্শ শিক্ষা, আদর্শ মানুষ গড়ার কারিগর</p>
             </div>
             
@@ -447,7 +447,7 @@ export default function HomePage() {
           </div>
           
           <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; ২০২৪ ইকরা মুকারী একাডেমী। সর্বস্বত্ব সংরক্ষিত।</p>
+            <p>&copy; ২০২৪ আমার স্কুল। সর্বস্বত্ব সংরক্ষিত।</p>
           </div>
         </div>
       </footer>

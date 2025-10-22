@@ -483,7 +483,7 @@ const PublicHomeworkPage = () => {
                 <span className="text-white font-bold text-lg">ই</span>
               </div>
             </div>
-            <h3 className="text-xl font-bold mb-2">ইকরা ইসলামিক স্কুল</h3>
+            <h3 className="text-xl font-bold mb-2">আমার স্কুল</h3>
             <p className="text-gray-400 mb-4">ভালোবাসা দিয়ে শিক্ষা, ইসলামিক মূল্যবোধে জীবন গড়া</p>
             <div className="flex justify-center space-x-6 text-sm text-gray-400">
               <span>📞 +৮৮০ ১৭১১ ২৩৪৫৬৭</span>
