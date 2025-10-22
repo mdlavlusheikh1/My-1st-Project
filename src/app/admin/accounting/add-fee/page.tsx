@@ -100,6 +100,8 @@ function AddFeePage() {
   const router = useRouter();
 
   useEffect(() => {
+    if (!auth) return;
+    
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setUser(user);
@@ -111,7 +113,7 @@ function AddFeePage() {
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, auth]);
 
   // Show exam fee breakdown when exam type is selected
   useEffect(() => {
