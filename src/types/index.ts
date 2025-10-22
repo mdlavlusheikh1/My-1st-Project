@@ -191,3 +191,17 @@ export interface MonthlyAttendanceReport {
   lateDays: number;
   attendancePercentage: number;
 }
+
+export interface ClassData {
+  id?: string;
+  classId?: string;
+  className: string;
+  schoolId: string;
+  section?: string;
+  teacherName?: string;
+  academicYear?: string;
+  totalStudents?: number;
+  isActive?: boolean;
+  schoolName?: string;
+  teacherId?: string;
+}

@@ -6,7 +6,7 @@ import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, getDocs, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { User as AuthUser, onAuthStateChanged } from 'firebase/auth';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { studentQueries, accountingQueries, feeQueries, examQueries } from '@/lib/database-queries';
+import { studentQueries, accountingQueries, feeQueries, examQueries, User, Exam, Class } from '@/lib/database-queries';
 import { SCHOOL_ID } from '@/lib/constants';
 import { useAlert } from '@/hooks/useAlert';
 import AlertDialog from '@/components/ui/alert-dialog';
@@ -49,15 +49,15 @@ function CollectExamFeePage() {
   const [selectedSectionFilter, setSelectedSectionFilter] = useState<string>('সকল সেকশন');
 
   // Student data states
-  const [students, setStudents] = useState<any[]>([]);
-  const [selectedStudents, setSelectedStudents] = useState<any[]>([]);
+  const [students, setStudents] = useState<User[]>([]);
+  const [selectedStudents, setSelectedStudents] = useState<User[]>([]);
 
   // Form states
   const [selectedExamType, setSelectedExamType] = useState<'monthly' | 'quarterly' | 'halfYearly' | 'annual' | ''>('monthly');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fee structure states
-  const [feeStructure, setFeeStructure] = useState<any>({});
+  const [feeStructure, setFeeStructure] = useState<{[key: string]: any}>({});
   const [loadingFees, setLoadingFees] = useState(false);
 
   // Pagination states
@@ -72,7 +72,7 @@ function CollectExamFeePage() {
   // Exam selection dialog states
   const [showExamSelectionDialog, setShowExamSelectionDialog] = useState(false);
   const [examFeesData, setExamFeesData] = useState<{[examId: string]: {[className: string]: number}}>({});
-  const [existingExams, setExistingExams] = useState<any[]>([]);
+  const [existingExams, setExistingExams] = useState<Exam[]>([]);
   const [loadingExamFeesData, setLoadingExamFeesData] = useState(false);
   const [selectedExamTypeForDialog, setSelectedExamTypeForDialog] = useState<string>('');
 
@@ -461,9 +461,9 @@ function CollectExamFeePage() {
       console.log(`📋 Loaded ${examsData.length} exams with schoolId: ${schoolId}`);
       
       // Filter out deleted exams (check both boolean and string values)
-      examsData = examsData.filter((exam: any) => {
-        const isDeleted = exam.deleted === true || exam.deleted === 'true';
-        console.log(`📋 Exam ${exam.id}: deleted=${exam.deleted}, isDeleted=${isDeleted}`);
+      examsData = examsData.filter((exam) => {
+        const isDeleted = (exam as any).deleted === true || (exam as any).deleted === 'true';
+        console.log(`📋 Exam ${exam.id}: deleted=${(exam as any).deleted}, isDeleted=${isDeleted}`);
         return !isDeleted;
       });
       console.log(`📋 After filtering deleted: ${examsData.length} active exams`);
@@ -917,9 +917,9 @@ function CollectExamFeePage() {
 
       // Class filter
       const classMatch = selectedClassFilter === 'সকল ক্লাস' ||
-        student.classId === selectedClassFilter ||
-        student.class === selectedClassFilter ||
-        classes.find(c => c.classId === selectedClassFilter)?.className === student.class;
+        (student as any).classId === selectedClassFilter ||
+        (student as any).class === selectedClassFilter ||
+        classes.find(c => c.classId === selectedClassFilter)?.className === (student as any).class;
 
       // Section filter
       const sectionMatch = selectedSectionFilter === 'সকল সেকশন' ||
@@ -976,7 +976,7 @@ function CollectExamFeePage() {
   };
 
   // Handle student selection
-  const handleStudentToggle = (student: any) => {
+  const handleStudentToggle = (student: User) => {
     setSelectedStudents(prev =>
       prev.find(s => s.uid === student.uid)
         ? prev.filter(s => s.uid !== student.uid)
@@ -1011,7 +1011,7 @@ function CollectExamFeePage() {
         // Get the exam fee amount for this student's class
         const examFeeAmount = calculateExamFee(selectedExamType, student);
 
-        const transactionData: any = {
+        const transactionData = {
           type: 'income' as const,
           category: 'exam_fee',
           amount: examFeeAmount,
@@ -1041,7 +1041,7 @@ function CollectExamFeePage() {
           transactionData.monthIndex = parseInt(selectedMonth) - 1;
         }
 
-        return accountingQueries.createTransaction(transactionData);
+        return accountingQueries.createTransaction(transactionData as any);
       });
 
       const transactionIds = await Promise.all(transactionPromises);
@@ -1100,7 +1100,7 @@ function CollectExamFeePage() {
   };
 
   // Calculate exam fee for a specific exam and student
-  const calculateFeeForExam = (exam: any, student: any) => {
+  const calculateFeeForExam = (exam: any, student: User) => {
     if (!exam || !student) {
       console.log('❌ No exam or student provided for fee calculation');
       return 0;
@@ -1275,7 +1275,7 @@ function CollectExamFeePage() {
   };
 
   // Calculate exam fee based on exam type and student class (legacy function)
-  const calculateExamFee = (examType: 'monthly' | 'quarterly' | 'halfYearly' | 'annual' | '', student: any) => {
+  const calculateExamFee = (examType: 'monthly' | 'quarterly' | 'halfYearly' | 'annual' | '', student: User) => {
     if (!examType || !student) return 0;
 
     const studentClass = student.class || 'প্রথম';
@@ -1369,7 +1369,7 @@ function CollectExamFeePage() {
       };
 
       // Create transaction record
-      const transactionData: any = {
+      const transactionData = {
         type: 'income' as const,
         category: 'exam_fee',
         amount: actualPaidAmount, // ← Use actual paid amount
@@ -1395,7 +1395,7 @@ function CollectExamFeePage() {
         transactionData.monthIndex = parseInt(selectedMonth) - 1;
       }
 
-      const transactionId = await accountingQueries.createTransaction(transactionData);
+      const transactionId = await accountingQueries.createTransaction(transactionData as any);
 
       // Create fee collection record
       await feeQueries.createFeeCollection({
@@ -1499,7 +1499,7 @@ function CollectExamFeePage() {
           ))}
 
           <button
-            onClick={() => auth.signOut()}
+            onClick={() => auth?.signOut()}
             className="flex items-center w-full px-6 py-2 mt-4 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
           >
             <LogOut className="w-4 h-4 mr-3" />

@@ -7,9 +7,10 @@ import { doc, setDoc, getDoc, collection, getDocs, query, where } from 'firebase
 import { User, onAuthStateChanged } from 'firebase/auth';
 import AdminLayout from '@/components/AdminLayout';
 import Modal from '@/components/ui/modal';
-import { accountingQueries } from '@/lib/database-queries';
+import { accountingQueries, Exam, Class } from '@/lib/database-queries';
 import { SCHOOL_ID } from '@/lib/constants';
 import { useGlobalAlert } from '@/contexts/AlertContext';
+import { ClassData } from '@/types';
 import {
   ArrowLeft, Save, Edit, DollarSign,
   BookOpen, Loader2, CheckCircle, Calculator, Trash2
@@ -19,9 +20,9 @@ function ExamFeeManagementPage() {
   const { showSuccess, showError, showWarning, showConfirm } = useGlobalAlert();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [classes, setClasses] = useState<any[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [loadingClasses, setLoadingClasses] = useState(false);
-  const [actualExams, setActualExams] = useState<any[]>([]);
+  const [actualExams, setActualExams] = useState<Exam[]>([]);
   const [loadingExams, setLoadingExams] = useState(false);
   const [examFees, setExamFees] = useState<{[examType: string]: { [className: string]: number }}>({});
 
@@ -76,8 +77,8 @@ function ExamFeeManagementPage() {
         (updatedExams) => {
           console.log('🔄 Exams updated in real-time:', updatedExams.length);
           // Filter out deleted exams
-          const activeExams = updatedExams.filter((exam: any) => {
-            const isDeleted = exam.deleted === true || exam.deleted === 'true';
+          const activeExams = updatedExams.filter((exam) => {
+            const isDeleted = (exam as any).deleted === true || (exam as any).deleted === 'true';
             return !isDeleted;
           });
           console.log('🔄 Active exams after filtering:', activeExams.length);
@@ -169,12 +170,12 @@ function ExamFeeManagementPage() {
       console.log('📋 Found', allExams.length, 'exams in database');
 
       // Filter for our school ID and exclude deleted exams
-      const schoolExams = allExams.filter((exam: any) => {
-        const isDeleted = exam.deleted === true || exam.deleted === 'true';
+      const schoolExams = allExams.filter((exam) => {
+        const isDeleted = (exam as any).deleted === true || (exam as any).deleted === 'true';
         const isCorrectSchool = exam.schoolId === schoolId;
-        
-        console.log('📋 Checking exam:', exam.id, 'deleted:', exam.deleted, 'isDeleted:', isDeleted, 'school:', exam.schoolId);
-        
+
+        console.log('📋 Checking exam:', exam.id, 'deleted:', (exam as any).deleted, 'isDeleted:', isDeleted, 'school:', exam.schoolId);
+
         return isCorrectSchool && !isDeleted;
       });
       console.log('📋 Found', schoolExams.length, 'active exams for school', schoolId);
