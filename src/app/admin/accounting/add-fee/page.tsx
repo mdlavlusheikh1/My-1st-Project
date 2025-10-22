@@ -138,7 +138,9 @@ function AddFeePage() {
 
   const handleLogout = async () => {
     try {
-      await auth.signOut();
+      if (auth) {
+        await auth.signOut();
+      }
       router.push('/');
     } catch (error) {
       console.error('Logout error:', error);
