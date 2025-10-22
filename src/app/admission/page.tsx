@@ -68,12 +68,12 @@ function PublicAdmissionPage() {
   const router = useRouter();
 
   // Generate sequential student ID
-  const generateStudentId = async () => {
+  const generateStudentId = async (preserveExisting: boolean = false) => {
     try {
       console.log('🔢 Generating new student ID...');
       const students = await studentQueries.getAllStudents();
       console.log('📊 Total students found:', students.length);
-      
+
       // Log all students with their IDs for debugging
       students.forEach((student, index) => {
         console.log(`📝 Student ${index + 1}:`, {
@@ -82,7 +82,7 @@ function PublicAdmissionPage() {
           isApproved: student.isApproved
         });
       });
-      
+
       // Get all valid sequential student IDs (STD001, STD002, etc.)
       const sequentialStudentIds = students
         .map(s => s.studentId)
@@ -101,19 +101,34 @@ function PublicAdmissionPage() {
         .sort((a, b) => a - b); // Sort ascending
 
       console.log('📋 Valid sequential student IDs:', sequentialStudentIds);
-      
+
       // Find the next sequential number
       let nextNumber = 1;
       if (sequentialStudentIds.length > 0) {
         const maxNumber = Math.max(...sequentialStudentIds);
         nextNumber = maxNumber + 1;
       }
-      
-      const newId = `STD${nextNumber.toString().padStart(3, '0')}`;
-      
+
+      // Double-check to ensure the ID doesn't already exist
+      let newId = `STD${nextNumber.toString().padStart(3, '0')}`;
+      let attempts = 0;
+      const maxAttempts = 1000;
+
+      while (students.some(s => s.studentId === newId) && attempts < maxAttempts) {
+        nextNumber++;
+        newId = `STD${nextNumber.toString().padStart(3, '0')}`;
+        attempts++;
+      }
+
+      if (attempts >= maxAttempts) {
+        console.error('❌ Could not generate unique ID after maximum attempts');
+        newId = `STD${Date.now().toString().slice(-6)}`; // Fallback to timestamp
+      }
+
       console.log('🔢 Next sequential number:', nextNumber);
       console.log('✅ Generated new student ID:', newId);
-      
+      console.log('🔍 Verification - ID exists in database:', students.some(s => s.studentId === newId));
+
       return newId;
     } catch (error) {
       console.error('❌ Error generating student ID:', error);
@@ -410,19 +425,28 @@ function PublicAdmissionPage() {
       const settings = await settingsQueries.getSettings();
       console.log('⚙️ Settings:', settings);
 
-      // Always generate new student ID
-      console.log('🔢 Generating new student ID...');
-      let finalStudentId = await generateStudentId();
-      console.log('✅ Generated student ID:', finalStudentId);
-      
-      // Ensure we get a proper sequential ID, not timestamp-based
-      if (finalStudentId.includes('STD') && finalStudentId.length > 6) {
-        console.log('⚠️ Got timestamp-based ID, generating proper sequential ID');
-        // Get total students count and generate proper sequential ID
-        const students = await studentQueries.getAllStudents();
-        const sequentialNumber = students.length + 1;
-        finalStudentId = `STD${sequentialNumber.toString().padStart(3, '0')}`;
-        console.log('🔄 Using sequential ID:', finalStudentId);
+      // Check if student ID is already provided and preserve it
+      let finalStudentId = newStudent.studentId;
+      console.log('📝 Current student ID in form:', finalStudentId);
+
+      if (!finalStudentId || finalStudentId.trim() === '') {
+        // Only generate new student ID if none provided
+        console.log('🔢 No student ID provided, generating new one...');
+        finalStudentId = await generateStudentId();
+        console.log('✅ Generated student ID:', finalStudentId);
+
+        // Ensure we get a proper sequential ID, not timestamp-based
+        if (finalStudentId.includes('STD') && finalStudentId.length > 6) {
+          console.log('⚠️ Got timestamp-based ID, generating proper sequential ID');
+          // Get total students count and generate proper sequential ID
+          const students = await studentQueries.getAllStudents();
+          const sequentialNumber = students.length + 1;
+          finalStudentId = `STD${sequentialNumber.toString().padStart(3, '0')}`;
+          console.log('🔄 Using sequential ID:', finalStudentId);
+        }
+      } else {
+        // Preserve existing student ID
+        console.log('✅ Preserving existing student ID:', finalStudentId);
       }
 
       // Use uploaded ImageKit URL

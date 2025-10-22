@@ -84,6 +84,78 @@ function AddStudentPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const router = useRouter();
 
+  // Generate sequential student ID
+  const generateStudentId = async () => {
+    try {
+      console.log('🔢 Generating new student ID...');
+      const students = await studentQueries.getAllStudents();
+      console.log('📊 Total students found:', students.length);
+
+      // Log all students with their IDs for debugging
+      students.forEach((student, index) => {
+        console.log(`📝 Student ${index + 1}:`, {
+          name: student.name,
+          studentId: student.studentId,
+          isApproved: student.isApproved
+        });
+      });
+
+      // Get all valid sequential student IDs (STD001, STD002, etc.)
+      const sequentialStudentIds = students
+        .map(s => s.studentId)
+        .filter((id): id is string => {
+          if (!id || !id.startsWith('STD')) return false;
+          const numPart = id.replace('STD', '');
+          const num = parseInt(numPart);
+          return !isNaN(num) && num > 0 && num < 1000; // Only valid sequential IDs
+        })
+        .map(id => {
+          const numPart = id.replace('STD', '');
+          const num = parseInt(numPart);
+          console.log('🔍 Processing CHECKED ID:', id, '-> Number:', num);
+          return num;
+        })
+        .sort((a, b) => a - b); // Sort ascending
+
+      console.log('📋 Valid sequential student IDs:', sequentialStudentIds);
+
+      // Find the next sequential number
+      let nextNumber = 1;
+      if (sequentialStudentIds.length > 0) {
+        const maxNumber = Math.max(...sequentialStudentIds);
+        nextNumber = maxNumber + 1;
+      }
+
+      // Double-check to ensure the ID doesn't already exist
+      let newId = `STD${nextNumber.toString().padStart(3, '0')}`;
+      let attempts = 0;
+      const maxAttempts = 1000;
+
+      while (students.some(s => s.studentId === newId) && attempts < maxAttempts) {
+        nextNumber++;
+        newId = `STD${nextNumber.toString().padStart(3, '0')}`;
+        attempts++;
+      }
+
+      if (attempts >= maxAttempts) {
+        console.error('❌ Could not generate unique ID after maximum attempts');
+        newId = `STD${Date.now().toString().slice(-6)}`; // Fallback to timestamp
+      }
+
+      console.log('🔢 Next sequential number:', nextNumber);
+      console.log('✅ Generated new student ID:', newId);
+      console.log('🔍 Verification - ID exists in database:', students.some(s => s.studentId === newId));
+
+      return newId;
+    } catch (error) {
+      console.error('❌ Error generating student ID:', error);
+      // Use simple sequential ID as fallback
+      const fallbackId = `STD001`;
+      console.log('🔄 Using fallback ID:', fallbackId);
+      return fallbackId;
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -134,6 +206,17 @@ function AddStudentPage() {
     };
 
     loadClassData();
+  }, []);
+
+  // Auto-generate student ID when component loads
+  useEffect(() => {
+    const generateId = async () => {
+      if (!newStudent.studentId) {
+        const newId = await generateStudentId();
+        setNewStudent(prev => ({ ...prev, studentId: newId }));
+      }
+    };
+    generateId();
   }, []);
 
   // Auto-generate email when name is typed
@@ -254,13 +337,16 @@ function AddStudentPage() {
       // Get settings to use school information
       const settings = await settingsQueries.getSettings();
 
+      // Preserve the student ID as entered by the user
+      const finalStudentId = newStudent.studentId || `STD${Date.now().toString().slice(-3)}`;
+
       const studentData = {
         name: newStudent.name,
         displayName: newStudent.name,
         email: newStudent.email,
         phoneNumber: newStudent.phoneNumber,
         class: newStudent.class,
-        studentId: newStudent.studentId,
+        studentId: finalStudentId, // Use the provided or default student ID
         guardianName: newStudent.guardianName,
         guardianPhone: newStudent.guardianPhone,
         address: newStudent.address,
